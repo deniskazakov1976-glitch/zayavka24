@@ -121,3 +121,62 @@ class LeadNotifier:
         except Exception as exc:
             logger.error("Failed to send knowledge gap alert: %s", exc)
             return False
+
+    async def notify_demo_started_platform(
+        self,
+        user_label: str,
+        chat_id: str,
+    ) -> bool:
+        """Уведомление о переходе владельца с лендинга на демо-стенд платформы."""
+        if not self.bot or self.default_chat_id is None:
+            return False
+        text = (
+            f"🚀 <b>Новый потенциальный клиент на демо-стенде платформы!</b>\n"
+            f"<b>Пользователь:</b> {_esc(user_label)} (id: <code>{_esc(chat_id)}</code>)\n"
+            f"<i>Перешёл с лендинга по кнопке «Запустить демо в Telegram»</i>"
+        )
+        try:
+            await self.bot.send_message(
+                chat_id=self.default_chat_id,
+                text=text,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+            return True
+        except Exception as exc:
+            logger.error("Failed to send platform demo notification: %s", exc)
+            return False
+
+    async def notify_saas_trial_request(
+        self,
+        user_label: str,
+        chat_id: str,
+        city_name: str,
+        niche: str,
+        price_hint: str,
+        owner_phone: str,
+    ) -> bool:
+        """Уведомление о новой заявке на 3-дневный тест-драйв SaaS-платформы."""
+        if not self.bot or self.default_chat_id is None:
+            logger.info("SaaS trial request (no notify target): %s %s %s", user_label, city_name, owner_phone)
+            return False
+        text = (
+            f"🎯 <b>НОВАЯ ЗАЯВКА НА ТЕСТ-ДРАЙВ!</b>\n\n"
+            f"<b>Кто:</b> {_esc(user_label)} (TG id: <code>{_esc(chat_id)}</code>)\n"
+            f"<b>Город / Сервис:</b> {_esc(city_name)}\n"
+            f"<b>Ниша:</b> {_esc(niche)}\n"
+            f"<b>Прайс / Авито:</b> {_esc(price_hint[:300])}\n"
+            f"<b>Телефон владельца:</b> <code>{_esc(owner_phone)}</code>\n\n"
+            f"<i>Настрой бота под их прайс и пришли ссылку для тест-драйва!</i>"
+        )
+        try:
+            await self.bot.send_message(
+                chat_id=self.default_chat_id,
+                text=text,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+            return True
+        except Exception as exc:
+            logger.error("Failed to send SaaS trial notification: %s", exc)
+            return False
