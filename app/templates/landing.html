@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Заявка 24/7 — ИИ-менеджер продаж для Авито и Telegram</title>
-  <meta name="description" content="Увеличьте конверсию с Авито на 38%. ИИ-менеджер отвечает за 15 секунд 24/7, квалифицирует клиентов по фото авто и передает готовые телефоны в ваш Telegram.">
+  <title>Заявка 24/7 — ИИ-менеджер продаж для Авито, WhatsApp и Telegram с выгрузкой в CRM</title>
+  <meta name="description" content="Увеличьте конверсию в заявку на 38%. ИИ-менеджер отвечает за 15 секунд в Авито, WhatsApp и Telegram, квалифицирует клиентов по фото авто и мгновенно создает лиды в amoCRM, Битрикс24 или Telegram мастера.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -627,6 +627,122 @@
       line-height: 1.5;
     }
 
+    /* Channels & CRM Bento Section */
+    .channels-bento {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 96px;
+    }
+    .channels-full {
+      grid-column: 1 / -1;
+    }
+    .channel-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .channel-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+    .channel-card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .channel-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(0, 229, 153, 0.1);
+      border: 1px solid rgba(0, 229, 153, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+    .channel-icon-wrap.cyan {
+      background: rgba(0, 210, 255, 0.1);
+      border-color: rgba(0, 210, 255, 0.25);
+      color: var(--cyan);
+    }
+    .channel-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .channel-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .channel-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .channel-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .channel-pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-avito { background: #00AAFF; box-shadow: 0 0 6px #00AAFF; }
+    .dot-wa { background: #25D366; box-shadow: 0 0 6px #25D366; }
+    .dot-tg { background: #229ED9; box-shadow: 0 0 6px #229ED9; }
+    .dot-amo { background: #4C8BF5; box-shadow: 0 0 6px #4C8BF5; }
+    .dot-b24 { background: #00AEEF; box-shadow: 0 0 6px #00AEEF; }
+    .dot-wh { background: var(--primary); box-shadow: 0 0 6px var(--primary); }
+    
+    .sync-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(12, 16, 23, 0.7);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+    }
+    .sync-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sync-stage-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sync-stage-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .sync-arrow {
+      color: var(--primary);
+    }
+
     /* 3-Step Process */
     .steps-grid {
       display: grid;
@@ -774,6 +890,9 @@
     @media (max-width: 900px) {
       .proof-bar { grid-template-columns: repeat(2, 1fr); }
       .sim-wrap { grid-template-columns: 1fr; }
+      .channels-bento { grid-template-columns: 1fr; }
+      .sync-flow { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .sync-arrow { transform: rotate(90deg); align-self: center; }
       .calc-grid { grid-template-columns: 1fr; }
       .steps-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
@@ -799,6 +918,7 @@
 
       <div class="nav-links">
         <a href="#simulator">Симулятор диалога</a>
+        <a href="#channels">Каналы и CRM</a>
         <a href="#calc">Калькулятор прибыли</a>
         <a href="#steps">Как подключаем</a>
         <a href="#faq">Вопросы и ответы</a>
@@ -815,15 +935,15 @@
     <div class="wrap">
       <div class="hero-tag">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Ответ за 15 секунд в любое время суток
+        Авито • WhatsApp • Telegram ➔ amoCRM • Битрикс24
       </div>
 
       <h1>
-        ИИ-менеджер для Авито и Telegram: забирает телефон клиента 24/7
+        ИИ-менеджер для Авито, WhatsApp и Telegram: забирает телефон клиента и передает в CRM 24/7
       </h1>
 
       <p>
-        Клиент с Авито пишет сразу в 3–5 автосервисов. Если не ответить за 2 минуты — он уходит к конкуренту. ИИ «Заявка 24/7» квалифицирует марку авто по фото, держит вилку цен по прайсу и мгновенно отправляет готовый номер вам в Telegram.
+        Клиенты пишут ночью и в выходные на Авито и в WhatsApp. Если не ответить за 2 минуты — они уходят к конкурентам. ИИ «Заявка 24/7» квалифицирует марку авто по фото, держит вилку цен по прайсу и мгновенно создает сделку с контактом в amoCRM, Битрикс24 или Telegram мастера.
       </p>
 
       <div class="hero-ctas">
@@ -839,15 +959,15 @@
         </div>
         <div class="proof-item">
           <div class="proof-num">+38 <span>%</span></div>
-          <div class="proof-text">рост конверсии из чата Авито в оставленный номер телефона</div>
+          <div class="proof-text">рост конверсии из чатов в подтвержденный номер телефона</div>
         </div>
         <div class="proof-item">
-          <div class="proof-num">0 <span>₽</span></div>
-          <div class="proof-text">потерянной выручки в ночные часы и праздничные дни</div>
+          <div class="proof-num">3 <span>канала</span></div>
+          <div class="proof-text">Авито Pro, WhatsApp Web и Telegram в едином контуре</div>
         </div>
         <div class="proof-item">
-          <div class="proof-num">100 <span>%</span></div>
-          <div class="proof-text">защита прайс-листа без выдуманных цен и скидок (Guardrails)</div>
+          <div class="proof-num">100 <span>% CRM</span></div>
+          <div class="proof-text">мгновенное создание сделки в amoCRM, Битрикс24 или Webhook</div>
         </div>
       </div>
     </div>
@@ -930,6 +1050,75 @@
     </div>
   </section>
 
+  <!-- Section: Omnichannel & CRM Integration -->
+  <section id="channels" class="wrap" style="padding-top: 20px;">
+    <h2 class="section-title">Единый контур: от переписки до сделки в CRM</h2>
+    <p class="section-sub">Вам больше не нужно переключаться между мессенджерами. ИИ квалифицирует клиента на любой платформе и передает готовые данные туда, где работает ваш отдел продаж.</p>
+
+    <div class="channels-bento">
+      <div class="channel-card">
+        <div class="channel-card-header">
+          <div class="channel-icon-wrap">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          </div>
+          <div>
+            <h3>Входящие каналы трафика</h3>
+            <span style="font-size: 12px; color: var(--primary); font-weight: 600;">3 источника обращений</span>
+          </div>
+        </div>
+        <p>ИИ работает параллельно во всех точках первого контакта с клиентами. Одинаково вежливо, по единому прайсу и стандартам вашей компании.</p>
+        <div class="channel-pills">
+          <span class="channel-pill"><span class="channel-pill-dot dot-avito"></span> Авито Pro (API v3)</span>
+          <span class="channel-pill"><span class="channel-pill-dot dot-wa"></span> WhatsApp Web (Green-API)</span>
+          <span class="channel-pill"><span class="channel-pill-dot dot-tg"></span> Telegram-бот</span>
+        </div>
+      </div>
+
+      <div class="channel-card">
+        <div class="channel-card-header">
+          <div class="channel-icon-wrap cyan">
+            <svg class="icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div>
+            <h3>Мгновенный экспорт лидов</h3>
+            <span style="font-size: 12px; color: var(--cyan); font-weight: 600;">amoCRM • Битрикс24 • Telegram</span>
+          </div>
+        </div>
+        <p>Как только клиент отправляет номер, в вашей CRM автоматически создается сделка с контактом, маркой авто, перечнем услуг и ссылкой на диалог.</p>
+        <div class="channel-pills">
+          <span class="channel-pill"><span class="channel-pill-dot dot-amo"></span> amoCRM (API v4)</span>
+          <span class="channel-pill"><span class="channel-pill-dot dot-b24"></span> Битрикс24 (Webhooks)</span>
+          <span class="channel-pill"><span class="channel-pill-dot dot-tg"></span> Telegram мастеров</span>
+          <span class="channel-pill"><span class="channel-pill-dot dot-wh"></span> Custom Webhook (HMAC)</span>
+        </div>
+      </div>
+
+      <div class="channel-card channels-full">
+        <div class="sync-flow">
+          <div class="sync-stage">
+            <span class="sync-stage-title">1. Клиент пишет</span>
+            <span class="sync-stage-val">Авито / WhatsApp / TG</span>
+          </div>
+          <svg class="icon sync-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          <div class="sync-stage">
+            <span class="sync-stage-title">2. ИИ квалифицирует</span>
+            <span class="sync-stage-val">Марка, прайс, фото авто</span>
+          </div>
+          <svg class="icon sync-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          <div class="sync-stage">
+            <span class="sync-stage-title">3. Номер получен</span>
+            <span class="sync-stage-val">За 40–90 секунд</span>
+          </div>
+          <svg class="icon sync-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          <div class="sync-stage">
+            <span class="sync-stage-title">4. Готовая сделка</span>
+            <span class="sync-stage-val">amoCRM / Битрикс24 / TG</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Section 2: Lost Profit Calculator -->
   <section id="calc" class="wrap">
     <div class="calc-card">
@@ -995,8 +1184,8 @@
 
       <div class="step-card">
         <div class="step-badge">03</div>
-        <h4>Лиды в ваш Telegram</h4>
-        <p>ИИ отвечает на Авито 24/7. Как только клиент оставляет номер — ваш телефон вибрирует от Telegram-уведомления с готовой записью.</p>
+        <h4>Лиды в Telegram и CRM</h4>
+        <p>ИИ квалифицирует клиентов на Авито и в WhatsApp 24/7. Как только получен номер — автоматически создается сделка в amoCRM или Битрикс24, а мастеру в Telegram прилетает мгновенная карточка записи.</p>
       </div>
     </div>
   </section>
@@ -1046,6 +1235,26 @@
           Бот подтверждает получение материала с помощью мультимодальной нейросети, учитывает рабочее время (днем обещает оценку мастера за 15–20 минут, а ночью честно фиксирует обращение на утро) и запрашивает номер для связи.
         </div>
       </div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">
+          <span>Можно ли выгружать лиды напрямую в amoCRM или Битрикс24?</span>
+          <svg class="icon icon-sm faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="faq-a">
+          Да. В платформу встроен диспетчер CRM: при получении номера телефона ИИ автоматически создаёт сделку и контакт в amoCRM (через API v4) или Битрикс24 (через входящий вебхук), прикрепляет марку машины, запрошенную услугу и ссылку на переписку. Также поддерживаются кастомные Webhooks с HMAC-SHA256 подписью.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">
+          <span>Как подключается WhatsApp и не заблокируют ли номер?</span>
+          <svg class="icon icon-sm faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="faq-a">
+          Подключение занимает 1 минуту через сканирование QR-кода в WhatsApp Web (Green-API). Бот работает только с входящими обращениями от клиентов и никогда не занимается спам-рассылками, поэтому риск санкций со стороны WhatsApp сведен к нулю. Если вы сами ответите клиенту с телефона — бот мгновенно встанет на автопаузу.
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1063,7 +1272,7 @@
   <!-- Footer -->
   <footer>
     <div class="wrap">
-      <div>© 2026 Заявка 24/7. Платформа автоматизации продаж на Авито и в Telegram для автобизнеса РФ.</div>
+      <div>© 2026 Заявка 24/7. Платформа автоматизации продаж для Авито, WhatsApp и Telegram с выгрузкой в CRM.</div>
       <div class="footer-links">
         <a href="#simulator">Симулятор</a>
         <a href="#calc">Калькулятор</a>
@@ -1132,7 +1341,11 @@
       const chat = document.getElementById('chat-stream');
 
       try {
-        const resp = await fetch('/api/simulator/chat', {
+        const apiEndpoint = (window.location.origin.includes('github.io') || window.location.protocol === 'file:')
+          ? 'https://77.221.155.74.sslip.io/api/simulator/chat'
+          : '/api/simulator/chat';
+
+        const resp = await fetch(apiEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

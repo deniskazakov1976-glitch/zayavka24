@@ -45,6 +45,18 @@ class CompanyProfile(BaseModel):
     privacy_url: str = ""
     require_consent_notice: bool = True
 
+    # CRM Integration (WO / P2)
+    crm_type: Literal["none", "webhook", "amocrm", "bitrix24"] = "none"
+    crm_webhook_url: str = ""
+    crm_api_token: str = ""
+    crm_subdomain: str = ""
+
+    # WhatsApp Integration (WO / P3)
+    whatsapp_enabled: bool = False
+    whatsapp_instance_id: str = ""
+    whatsapp_api_token: str = ""
+    whatsapp_webhook_secret: str = ""
+
 
 class ConversationMessage(BaseModel):
     role: Literal["user", "assistant"]
@@ -53,7 +65,7 @@ class ConversationMessage(BaseModel):
 
 
 class LeadInfo(BaseModel):
-    channel: Literal["telegram", "avito"]
+    channel: Literal["telegram", "avito", "whatsapp"]
     chat_id: str
     company_slug: str
     client_name: str = ""

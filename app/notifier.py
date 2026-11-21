@@ -4,6 +4,7 @@ from typing import Optional
 
 from aiogram import Bot
 
+from app.crm import CRMDispatcher
 from app.models import CompanyProfile, KnowledgeGap, LeadInfo
 
 logger = logging.getLogger(__name__)
@@ -40,13 +41,27 @@ def format_lead_message(lead: LeadInfo, company: Optional[CompanyProfile] = None
 
 
 class LeadNotifier:
-    """Sends captured leads and demo-visit alerts to the owner's Telegram chat or group."""
+    """Sends captured leads and demo-visit alerts to the owner's Telegram chat or group, and syncs to CRM."""
 
-    def __init__(self, bot: Optional[Bot], default_chat_id: Optional[int]) -> None:
+    def __init__(
+        self,
+        bot: Optional[Bot],
+        default_chat_id: Optional[int],
+        crm_dispatcher: Optional[CRMDispatcher] = None,
+    ) -> None:
         self.bot = bot
         self.default_chat_id = default_chat_id
+        self.crm_dispatcher = crm_dispatcher or CRMDispatcher()
 
     async def notify(self, lead: LeadInfo, company: Optional[CompanyProfile] = None) -> bool:
+        # 1. Asynchronously dispatch lead to external CRM if configured (amoCRM, Bitrix24, Webhook)
+        if self.crm_dispatcher and company and company.crm_type and company.crm_type != "none":
+            try:
+                import asyncio
+                asyncio.create_task(self.crm_dispatcher.dispatch(lead, company))
+            except Exception as crm_err:
+                logger.warning("Failed to schedule CRM dispatch: %s", crm_err)
+
         target_chat_id = (
             company.notify_chat_id
             if company and company.notify_chat_id is not None
