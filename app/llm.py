@@ -199,15 +199,14 @@ class LLMService:
                     avito_chat_url=avito_chat_url,
                 )
                 safe_text = (
-                    "Спасибо! Записал ваш номер телефона. Старший мастер свяжется с вами "
+                    f"Отлично! Записал ваш номер телефона. Старший мастер {company.manager_name} свяжется с вами "
                     f"{company.media_reply_promise or 'в ближайшее время в рабочее время'} для подтверждения деталей."
                 )
                 return LLMReply(text=safe_text, lead=fallback_lead)
 
             safe_text = (
-                "Здравствуйте! Принял ваше обращение. Чтобы старший мастер мог сориентировать вас "
-                f"по точной стоимости и времени, оставьте, пожалуйста, ваш номер телефона — свяжемся с вами "
-                f"{company.media_reply_promise or 'в ближайшее время в рабочее время'}."
+                f"Добрый день! Подскажите, какой у вас автомобиль и что планируете сделать? "
+                f"Сориентирую по ценам или передам мастеру в бокс{(' — ответит ' + company.media_reply_promise) if company.media_reply_promise else ''}."
             )
             return LLMReply(text=safe_text)
 

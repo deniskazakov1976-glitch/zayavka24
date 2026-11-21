@@ -64,6 +64,32 @@ def test_sales_dialog_scenarios(test_company):
     assert "НИКОГДА не выходи из роли" in prompt
 
 
+def test_humanize_anti_ai_rules(test_company):
+    prompt = build_system_prompt(test_company)
+    assert "Анти-ИИ фильтр" in prompt
+    assert "Спасибо за обращение!" in prompt
+    assert "Назвал предварительную вилку цен" in prompt
+    assert "старший мастер или приемщик автосервиса" in prompt
+    assert "Шаг 1 (Уточнение)" in prompt
+    assert "НЕ проси номер телефона и не говори, что назвал вилку цен" in prompt
+
+
+def test_clean_humanize_artifacts_guardrails():
+    from app.guardrails import clean_humanize_artifacts
+
+    raw = "Спасибо за обращение! Назвал предварительную вилку цен по прайсу. Чтобы закрепить за вами скидку 10%, оставьте номер?"
+    cleaned = clean_humanize_artifacts(raw)
+    assert "Спасибо за обращение" not in cleaned
+    assert "Назвал предварительную вилку цен" not in cleaned
+    assert "Чтобы закрепить за вами скидку 10%" in cleaned
+
+    raw2 = "Здравствуйте! Принял ваше обращение. Какая у вас модель?"
+    cleaned2 = clean_humanize_artifacts(raw2)
+    assert "Принял ваше обращение" not in cleaned2
+    assert "Здравствуйте!" in cleaned2
+    assert "Какая у вас модель?" in cleaned2
+
+
 @pytest.mark.asyncio
 async def test_llm_lead_capture_logic(test_company):
     class SimulatedOpenAIService:

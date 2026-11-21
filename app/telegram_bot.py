@@ -83,9 +83,9 @@ def build_telegram_router(
             greeting = company.greeting.strip()
         elif company.disclose_ai:
             greeting = (
-                f"Здравствуйте! На связи {company.assistant_label} студии «{company.company_name}» ({company.city}). "
-                f"Помогу сориентироваться по стоимости и передам расчёт старшему мастеру {company.manager_name}. "
-                f"Подскажите, какая услуга вас интересует?"
+                f"Здравствуйте! На связи студия «{company.company_name}» ({company.city}). "
+                f"Помогу сориентироваться по стоимости работ и передам расчёт старшему мастеру {company.manager_name}. "
+                f"Подскажите, какой у вас автомобиль и что планируете сделать?"
             )
         else:
             greeting = (
