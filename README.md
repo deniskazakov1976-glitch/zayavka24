@@ -192,3 +192,48 @@ ssh aeza-vps "cd /opt/BotAvitoTelegram && docker logs --tail 50 botavitotelegram
 
 Типичные причины: токен скопирован с пробелом, бот удалён в BotFather, либо второй экземпляр
 того же бота уже запущен где-то ещё (Telegram разрешает только один `getUpdates`).
+
+---
+
+## Контроль версий (git)
+
+Проект под git. Что **не** попадает в репозиторий (см. `.gitignore`): `.env` с токенами,
+`data/` с базой и персональными данными клиентов, архивы бэкапов, `.venv`, артефакты инструментов.
+
+```powershell
+git log --oneline                 # история
+git status                        # что изменено
+git diff                          # что именно изменено
+git tag -l                        # релизы
+```
+
+**Перед каждым деплоем** фиксируйте состояние:
+
+```powershell
+git add -A
+git commit -m "что изменили"
+```
+
+**Откат к рабочей версии** (если после правок что-то сломалось):
+
+```powershell
+git stash                         # убрать незакоммиченные правки
+git checkout <hash-или-тег>       # вернуться к известной рабочей версии
+# либо, если правки уже закоммичены:
+git revert <hash>                 # отменить конкретный коммит, сохранив историю
+```
+
+После отката не забудьте передеплоить — на сервере код обновляется только деплоем:
+
+```powershell
+tar -czf $env:TEMP\botapp.tgz --exclude="__pycache__" app main.py requirements.txt tests README.md .env.example
+scp $env:TEMP\botapp.tgz aeza-vps:/root/botapp.tgz
+Get-Content -Raw scripts\_deploy_multibot.sh | ssh aeza-vps "bash -s"
+```
+
+Перед распаковкой `scripts/_deploy_multibot.sh` сам складывает архив кода и копию БД
+в `/root/backups/` на сервере — это вторая линия отката, независимая от git.
+
+**Если планируете публиковать репозиторий** (GitHub/GitLab): сначала смените пароль
+`DASHBOARD_PASSWORD`, токен бота через `@BotFather` и `AVITO_CLIENT_SECRET` — они лежали
+в `.env`, но старые значения уже засветились в переписке и в копиях на сервере.

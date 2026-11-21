@@ -1,5 +1,7 @@
 import logging
+import re
 import secrets
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -137,6 +139,12 @@ class ParsePriceRequest(BaseModel):
 
 class TestDialogRequest(BaseModel):
     message: str
+
+
+class SimulatorChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1000)
+    history: List[Dict[str, str]] = Field(default_factory=list)
+    company_slug: str = "detailing_premium"
 
 
 TRANSLIT_MAP = {
@@ -962,6 +970,97 @@ def build_dashboard_router(
     async def onboarding_page(user: CurrentUser = Depends(current_user)) -> str:
         tenant_slug = user.tenant_slug
         return get_onboarding_html(_resolve_bot_username(tenant_slug))
+
+    # === Живой симулятор диалога на лендинге с реальным ИИ (AnyModel) ===
+    _sim_rate_limits: Dict[str, List[float]] = {}
+
+    @router.post("/api/simulator/chat")
+    async def api_simulator_chat(req: SimulatorChatRequest, request: Request) -> Dict[str, Any]:
+        # 1. Защита от спама и перерасхода токенов: лимит 30 сообщений в минуту на 1 IP
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        timestamps = _sim_rate_limits.setdefault(client_ip, [])
+        _sim_rate_limits[client_ip] = [t for t in timestamps if now - t < 60]
+        if len(_sim_rate_limits[client_ip]) >= 30:
+            raise HTTPException(
+                status_code=429,
+                detail="Слишком много сообщений в симулятор. Пожалуйста, подождите 1 минуту перед следующим вопросом."
+            )
+        _sim_rate_limits[client_ip].append(now)
+
+        # 2. Проверка наличия номера телефона в сообщении пользователя
+        phone_match = re.search(r"(?:\+?7|8)[\s\-\(\)]*\d{3}[\s\-\(\)]*\d{3}[\s\-]*\d{2}[\s\-]*\d{2}", req.message)
+        extracted_phone = phone_match.group(0).strip() if phone_match else None
+
+        # 3. Выбор профиля компании (по умолчанию студия Детейлинг Премиум)
+        target_company = (
+            company_store.get(req.company_slug)
+            or company_store.get("detailing_premium")
+            or company_store.get("demo_detailing")
+            or company_store.get("demo_bodyshop")
+        )
+
+        active_llm = llm
+        if active_llm is None and bot_manager is not None:
+            active_llm = getattr(bot_manager, "llm", None)
+
+        if not active_llm or not target_company:
+            if extracted_phone:
+                return {
+                    "status": "ok",
+                    "reply": f"Спасибо! Зафиксировал ваш номер {extracted_phone}. Старший мастер перезвонит вам в течение 10 минут с детальным расчётом.",
+                    "lead_captured": True,
+                    "phone": extracted_phone,
+                }
+            return {
+                "status": "ok",
+                "reply": "Здравствуйте! С удовольствием подскажем по стоимости и срокам. Уточните, пожалуйста, марку и модель вашего автомобиля и какие именно работы планируете сделать?",
+                "lead_captured": False,
+                "phone": None,
+            }
+
+        # 4. Формирование истории диалога
+        from app.models import ConversationMessage
+        history_msgs: List[ConversationMessage] = []
+        for item in req.history[-10:]:
+            role = item.get("role")
+            content = item.get("content", "")
+            if role in ("user", "assistant") and content:
+                history_msgs.append(ConversationMessage(role=role, content=content))
+
+        try:
+            reply_obj = await active_llm.generate_reply(
+                company=target_company,
+                history=history_msgs,
+                user_message=req.message,
+                tenant_slug="simulator",
+            )
+            reply_text = reply_obj.text
+            lead = reply_obj.lead
+            phone = (lead.phone if lead else None) or extracted_phone
+            lead_captured = bool(phone)
+
+            return {
+                "status": "ok",
+                "reply": reply_text,
+                "lead_captured": lead_captured,
+                "phone": phone,
+            }
+        except Exception as exc:
+            logger.error("Simulator AI error: %s", exc)
+            if extracted_phone:
+                return {
+                    "status": "ok",
+                    "reply": f"Спасибо! Зафиксировал ваш номер {extracted_phone}. Старший мастер перезвонит вам в течение 10 минут с расчётом.",
+                    "lead_captured": True,
+                    "phone": extracted_phone,
+                }
+            return {
+                "status": "ok",
+                "reply": "Здравствуйте! Подскажите, какой у вас автомобиль и что планируете сделать? Могу сразу назвать ориентировочную вилку цен и записать на бесплатный осмотр.",
+                "lead_captured": False,
+                "phone": None,
+            }
 
     @router.get("/landing", response_class=HTMLResponse)
     async def landing_html() -> str:

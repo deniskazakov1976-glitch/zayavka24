@@ -1125,19 +1125,62 @@
       document.getElementById('calc-total-loss').innerText = monthlyLoss.toLocaleString('ru-RU') + ' ₽';
     }
 
-    const scenarios = {
-      'Здравствуйте! Сколько стоит оклейка зон риска на Geely Monjaro?': 
-        'Здравствуйте! На Geely Monjaro комплексная оклейка зон риска (капот, бампер, крылья, стойки и фары) оригинальным полиуретаном выходит от 50 000 до 72 000 ₽ в зависимости от толщины плёнки. Скажите, автомобиль новый из салона или уже есть сколы?',
-      
-      'Сколько стоит локальная покраска переднего бампера на Camry?': 
-        'Покраска бампера под ключ со снятием, установкой и точным подбором цвета в лаборатории — от 13 000 до 18 000 ₽. Скажите, есть ли трещины на пластике или только потёртость?',
-      
-      'Работаете в воскресенье? Хочу приехать на осмотр кузова': 
-        'Да, работаем ежедневно с 10:00 до 21:00! Осмотр у нас бесплатный и занимает 10 минут. Оставьте ваш номер телефона — согласуем удобное время и закрепим за вами скидку 10% на первый визит.',
-      
-      'Прислал фото царапины. Мой номер +7 999 111-22-33, перезвоните': 
-        'Спасибо! Фото получил и передал старшему мастеру Денису. Набираем вас в течение 10 минут!'
-    };
+    let simHistory = [];
+
+    async function requestSimulatorReply(userText, typingId) {
+      simHistory.push({ role: 'user', content: userText });
+      const chat = document.getElementById('chat-stream');
+
+      try {
+        const resp = await fetch('/api/simulator/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userText,
+            history: simHistory,
+            company_slug: 'detailing_premium'
+          })
+        });
+
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        if (resp.ok) {
+          const data = await resp.json();
+          simHistory.push({ role: 'assistant', content: data.reply });
+          chat.innerHTML += `<div class="msg msg-bot">${escapeHtml(data.reply)}</div>`;
+
+          if (data.lead_captured && data.phone) {
+            chat.innerHTML += `
+              <div class="msg-lead-alert">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><b>Лид перехвачен:</b> ${escapeHtml(data.phone)} • Карточка отправлена в Telegram старшему мастеру</span>
+              </div>`;
+          }
+        } else {
+          throw new Error('HTTP ' + resp.status);
+        }
+      } catch (err) {
+        console.warn('Simulator fallback to offline:', err);
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        const phoneMatch = userText.match(/(\+7|8)[\s\-]?[0-9]{3}[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}/);
+        if (phoneMatch) {
+          chat.innerHTML += `<div class="msg msg-bot">Спасибо! Зафиксировал ваш номер <b>${phoneMatch[0]}</b>. Мастер свяжется с вами в течение 10 минут с детальным расчётом.</div>`;
+          chat.innerHTML += `
+            <div class="msg-lead-alert">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><b>Лид перехвачен:</b> ${phoneMatch[0]} • Карточка отправлена в Telegram</span>
+            </div>`;
+        } else if (userText.toLowerCase().includes('покрас')) {
+          chat.innerHTML += `<div class="msg msg-bot">Здравствуйте! Локальная покраска детали у нас от 9 000 ₽, полная покраска элемента — от 13 000 ₽ с подбором цвета в лаборатории. Подскажите, какой у вас автомобиль и какая деталь повреждена?</div>`;
+        } else {
+          chat.innerHTML += `<div class="msg msg-bot">Здравствуйте! Готов сориентировать по стоимости и срокам. Подскажите марку и модель авто, и что планируете сделать?</div>`;
+        }
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
 
     function simulatePrompt(btn, text) {
       document.querySelectorAll('.prompt-chip').forEach(c => c.classList.remove('active'));
@@ -1146,7 +1189,6 @@
       const chat = document.getElementById('chat-stream');
       chat.innerHTML += `<div class="msg msg-user">${escapeHtml(text)}</div>`;
       
-      // Typing indicator
       const typingId = 'typing-' + Date.now();
       chat.innerHTML += `
         <div class="msg msg-bot" id="${typingId}">
@@ -1154,22 +1196,7 @@
         </div>`;
       chat.scrollTop = chat.scrollHeight;
 
-      setTimeout(() => {
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
-
-        const reply = scenarios[text] || 'Спасибо за обращение! Оставьте ваш номер телефона, мастер перезвонит в течение 15 минут.';
-        chat.innerHTML += `<div class="msg msg-bot">${escapeHtml(reply)}</div>`;
-
-        if (text.includes('+7 999 111-22-33')) {
-          chat.innerHTML += `
-            <div class="msg-lead-alert">
-              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><b>Лид перехвачен:</b> +7 999 111-22-33 • Уведомление отправлено в Telegram мастеру</span>
-            </div>`;
-        }
-        chat.scrollTop = chat.scrollHeight;
-      }, 700);
+      requestSimulatorReply(text, typingId);
     }
 
     function sendCustomMessage() {
@@ -1188,23 +1215,7 @@
         </div>`;
       chat.scrollTop = chat.scrollHeight;
 
-      setTimeout(() => {
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
-
-        const phoneMatch = text.match(/(\+7|8)[\s\-]?[0-9]{3}[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}/);
-        if (phoneMatch) {
-          chat.innerHTML += `<div class="msg msg-bot">Спасибо! Зафиксировал ваш номер <b>${phoneMatch[0]}</b>. Мастер свяжется с вами в течение 10 минут с расчётом.</div>`;
-          chat.innerHTML += `
-            <div class="msg-lead-alert">
-              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><b>Лид перехвачен:</b> ${phoneMatch[0]} • Карточка отправлена в Telegram</span>
-            </div>`;
-        } else {
-          chat.innerHTML += `<div class="msg msg-bot">Спасибо за обращение! Назвал предварительную вилку цен по прайсу. Чтобы закрепить за вами скидку 10% и записать на удобное время, оставьте ваш номер телефона?</div>`;
-        }
-        chat.scrollTop = chat.scrollHeight;
-      }, 750);
+      requestSimulatorReply(text, typingId);
     }
 
     function escapeHtml(str) {
