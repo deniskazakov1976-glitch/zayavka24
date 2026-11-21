@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Заявка 24/7 — Центр управления ИИ-продажами</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #07090e;
+      --bg-surface: #0e131f;
+      --card-bg: #131b2c;
+      --card-elevated: #182237;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 255, 255, 0.16);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.25);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Space Grotesk', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* SVG Icon utility */
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      vertical-align: middle;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .icon-sm { width: 15px; height: 15px; stroke-width: 2; }
+    .icon-lg { width: 22px; height: 22px; stroke-width: 2; }
+
+    /* Top Navigation Header */
+    header {
+      background: rgba(14, 19, 31, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #07090e;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+    .brand-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .telemetry-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .btn-landing-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-landing-link:hover {
+      background: rgba(59, 130, 246, 0.22);
+      color: #fff;
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1380px;
+      width: 100%;
+      margin: 24px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    /* KPI Telemetry Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .kpi-card:hover {
+      border-color: var(--card-border-hover);
+    }
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+    .kpi-icon-wrap {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--primary);
+    }
+    .kpi-value {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .kpi-meta {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    /* Tabs Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 6px;
+      background: var(--bg-surface);
+      padding: 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--card-border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tab-btn.active {
+      color: #ffffff;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .tab-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .tab-btn.active .tab-count {
+      background: var(--primary);
+      color: #07090e;
+      font-weight: 700;
+    }
+
+    /* Panels & Cards */
+    .panel {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    .panel.active { display: block; }
+
+    .panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: var(--bg-surface);
+    }
+    .panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Tables */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      padding: 12px 20px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    td {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Forms */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 24px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-group.full {
+      grid-column: span 2;
+    }
+    .form-actions {
+      grid-column: span 2;
+      flex-direction: row;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      font-size: 13px;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+    .role-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(76, 125, 255, .16);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .role-badge.owner {
+      background: rgba(255, 176, 32, .16);
+      color: #ffb020;
+    }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .form-hint {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-size: 13px;
+      font-family: var(--font-main);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #07090e;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--card-border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--card-border-hover);
+    }
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.3);
+      color: var(--accent-rose);
+    }
+    .btn-danger:hover {
+      background: rgba(244, 63, 94, 0.22);
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-avito {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+    }
+    .badge-telegram {
+      background: rgba(167, 139, 250, 0.12);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      color: #c4b5fd;
+    }
+    .badge-learned {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+    .badge-pending {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card-elevated);
+      border: 1px solid var(--primary);
+      color: #ffffff;
+      padding: 14px 22px;
+      border-radius: var(--radius-md);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 1000;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: span 1; }
+      header { flex-direction: column; align-items: flex-start; }
+      .header-actions { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <a href="/" class="brand">
+      <div class="brand-mark">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">
+          Заявка 24/7
+          <span class="brand-tag">Операционный пульт</span>
+        </div>
+        <div class="brand-sub">ИИ-диспетчер Авито и Telegram • @{{BOT_USERNAME}}</div>
+      </div>
+    </a>
+
+    <div class="header-actions">
+      <div class="telemetry-pill">
+        <span class="pulse-dot"></span>
+        <span>Система активна</span>
+      </div>
+      <a href="/onboarding" class="btn-landing-link" id="btn-onboarding-link">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+        Мастер настройки
+      </a>
+      <a href="/landing" class="btn-landing-link" target="_blank">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Клиентский лендинг
+      </a>
+      <button class="btn btn-secondary btn-sm" onclick="loadAllData()">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Обновить
+      </button>
+      <div class="user-pill" id="user-pill" title="Текущий пользователь">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="user-name">—</span>
+        <span class="role-badge" id="user-role"></span>
+      </div>
+      <a href="/logout" class="btn btn-secondary btn-sm" title="Выйти из кабинета">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Выйти
+      </a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Telemetry KPI Overview -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span>Собранные лиды</span>
+          <div class="kpi-icon-wrap">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value" id="kpi-leads">0</div>
+        <div class="kpi-meta">Телефоны с квалификацией</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span>Диалоги клиентов</span>
+          <div class="kpi-icon-wrap" style="color:var(--accent-blue);">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value" id="kpi-sessions">0</div>
+        <div class="kpi-meta">Авито + Telegram</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span>Самообучение (Вопросы)</span>
+          <div class="kpi-icon-wrap" style="color:var(--accent-amber);">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value" id="kpi-gaps">0</div>
+        <div class="kpi-meta">Новых вопросов вне базы</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span>Профили автобизнесов</span>
+          <div class="kpi-icon-wrap" style="color:var(--accent-cyan);">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value" id="kpi-companies">0</div>
+        <div class="kpi-meta">Готовые демо-ссылки</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('leads')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+        Лиды и заявки
+        <span class="tab-count" id="count-leads">0</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('sessions')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Активные диалоги
+        <span class="tab-count" id="count-sessions">0</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('gaps')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        База самообучения
+        <span class="tab-count" id="count-gaps">0</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('companies')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        Компании и ссылки
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('create')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Добавить компанию
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('avito')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Авито Pro
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('guard')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Защита цен
+      </button>
+
+      <button class="tab-btn" id="tab-usage-btn" onclick="switchTab('usage')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Расходы
+      </button>
+
+      <button class="tab-btn" id="tab-tenants-btn" onclick="switchTab('tenants')" style="display:none">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Клиенты и боты
+        <span class="tab-count" id="count-tenants">0</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: Leads -->
+    <div id="panel-leads" class="panel active">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+            Зафиксированные заявки
+          </div>
+          <div class="panel-subtitle">Номера телефонов, квалификация повреждений и удобное время</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата и время</th>
+              <th>Канал</th>
+              <th>Компания</th>
+              <th>Телефон</th>
+              <th>Клиент / Автомобиль</th>
+              <th>Услуга и вилка цены</th>
+              <th>Детали диалога</th>
+            </tr>
+          </thead>
+          <tbody id="table-leads-body">
+            <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка лидов...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: Sessions -->
+    <div id="panel-sessions" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Диалоги в реальном времени
+          </div>
+          <div class="panel-subtitle">Контроль работы ИИ, перехват управления человеком и пауза на 24 часа</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Канал</th>
+              <th>ID чата</th>
+              <th>Компания</th>
+              <th>Статус ИИ</th>
+              <th>Обновлено</th>
+              <th>Действие</th>
+            </tr>
+          </thead>
+          <tbody id="table-sessions-body">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка диалогов...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: Knowledge Gaps -->
+    <div id="panel-gaps" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            База самообучения: вопросы без ответа
+          </div>
+          <div class="panel-subtitle">Вопросы от клиентов, которых не было в прайсе. Обучите бота в 1 клик!</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Компания</th>
+              <th>Вопрос клиента</th>
+              <th>Исходное сообщение</th>
+              <th>Статус</th>
+              <th>Обучение</th>
+            </tr>
+          </thead>
+          <tbody id="table-gaps-body">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка вопросов...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: Companies -->
+    <div id="panel-companies" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            Профили автобизнесов
+          </div>
+          <div class="panel-subtitle">Персональные демо-ссылки для отправки руководителям в Авито/Telegram</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="switchTab('create')">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать компанию
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Компания</th>
+              <th>Город / Ниша</th>
+              <th>Срок ответа (SLA)</th>
+              <th>Персональная демо-ссылка</th>
+            </tr>
+          </thead>
+          <tbody id="table-companies-body">
+            <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка компаний...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: Create Company -->
+    <div id="panel-create" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Создать профиль под клиента с Авито</div>
+          <div class="panel-subtitle">Скопируйте текст из объявления Авито — бот сразу сформирует персональную ссылку</div>
+        </div>
+      </div>
+      <form id="create-company-form" onsubmit="handleCreateCompany(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Название компании *</label>
+            <input type="text" id="fc-name" placeholder="например: Детейлинг Казань Pro" required>
+          </div>
+          <div class="form-group">
+            <label>Slug (для ссылки) *</label>
+            <input type="text" id="fc-slug" placeholder="например: detailing_kazan" pattern="^[a-zA-Z0-9_-]+$" required>
+            <span class="form-hint">Будет в ссылке: t.me/{{BOT_USERNAME}}?start=...</span>
+          </div>
+          <div class="form-group">
+            <label>Город *</label>
+            <input type="text" id="fc-city" placeholder="например: Казань" required>
+          </div>
+          <div class="form-group">
+            <label>Ниша</label>
+            <input type="text" id="fc-niche" value="детейлинг и кузовной ремонт">
+          </div>
+          <div class="form-group">
+            <label>Имя мастера</label>
+            <input type="text" id="fc-manager" value="Александр">
+          </div>
+          <div class="form-group">
+            <label>Роль мастера</label>
+            <input type="text" id="fc-role" value="старший мастер">
+          </div>
+          <div class="form-group">
+            <label>График работы</label>
+            <input type="text" id="fc-work-hours" value="Ежедневно с 10:00 до 21:00">
+            <span class="form-hint">Умное определение рабочих часов и ночи</span>
+          </div>
+          <div class="form-group">
+            <label>Срок ответа по фото (SLA)</label>
+            <input type="text" id="fc-media-promise" value="в течение 15–20 минут в рабочее время">
+            <span class="form-hint">Что обещает бот (вместо жестких 10 мин)</span>
+          </div>
+          <div class="form-group full">
+            <label>Адрес сервиса</label>
+            <input type="text" id="fc-address" placeholder="например: ул. Автозаводская, д. 23, бокс №2">
+          </div>
+          <div class="form-group full">
+            <label>Услуги и цены из прайса (по одной на строчку) *</label>
+            <textarea id="fc-services" rows="4" placeholder="Оклейка зон риска полиуретаном: от 45 000 до 75 000 ₽&#10;Полировка кузова 2 этапа: от 14 000 до 25 000 ₽" required></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Преимущества компании (по одному на строчку)</label>
+            <textarea id="fc-advantages" rows="3" placeholder="Гарантия 5 лет по заказ-наряду&#10;Охраняемый бокс с видеонаблюдением"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Оффер для взятия телефона</label>
+            <input type="text" id="fc-discount" value="скидку 10% на первый визит и бесплатную проверку ЛКП">
+          </div>
+        </div>
+        <div style="padding: 16px 24px; background:var(--bg-surface); border-top:1px solid var(--card-border); display:flex; justify-content:flex-end; gap:12px;">
+          <button type="button" class="btn btn-secondary" onclick="switchTab('companies')">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-company">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Сохранить и получить ссылку
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- TAB 6: Avito Pro -->
+    <div id="panel-avito" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Интеграция с Авито Messenger API v3
+          </div>
+          <div class="panel-subtitle">Официальное подключение чатов Авито. Доступно для всех коммерческих тарифов</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="avito-enabled" style="width:18px;height:18px;accent-color:var(--primary);">
+            <span>Включить прием сообщений из Авито</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Client ID *</label>
+          <input type="text" id="avito-client-id" placeholder="из раздела avito.ru/professionals/api">
+        </div>
+        <div class="form-group">
+          <label>Client Secret *</label>
+          <input type="password" id="avito-client-secret" placeholder="Секретный ключ">
+        </div>
+        <div class="form-group">
+          <label>User ID (номер профиля) *</label>
+          <input type="number" id="avito-user-id" placeholder="например: 123456789">
+        </div>
+        <div class="form-group">
+          <label>Компания по умолчанию для Авито *</label>
+          <select id="avito-company-slug"></select>
+        </div>
+        <div class="form-group full">
+          <label>Webhook URL (для регистрации в Авито) *</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="avito-webhook-url" readonly style="background:rgba(0,0,0,0.25);">
+            <button type="button" class="btn btn-secondary" onclick="copyWebhookUrl()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Копировать
+            </button>
+          </div>
+          <span class="form-hint">Защищённый URL с криптографическим токеном</span>
+        </div>
+      </div>
+      <div style="padding:16px 24px; background:var(--bg-surface); border-top:1px solid var(--card-border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <button type="button" class="btn btn-secondary" onclick="handleTestAvito()">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Проверить связь с Авито
+        </button>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-secondary" id="btn-register-webhook" onclick="handleRegisterWebhook()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Зарегистрировать Webhook
+          </button>
+          <button type="button" class="btn btn-primary" onclick="handleSaveAvitoConfig()">
+            Сохранить настройки
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: Guardrails Events -->
+    <div id="panel-guard" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Журнал перехватов цен (Guardrails)
+          </div>
+          <div class="panel-subtitle">Ответы нейросети, где модель пыталась назвать цену не из прайса, и была безопасно перехвачена</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Время</th>
+              <th>Канал / Компания</th>
+              <th>Заблокированные термины</th>
+              <th>Что хотела сказать LLM</th>
+              <th>Безопасный ответ клиенту</th>
+            </tr>
+          </thead>
+          <tbody id="table-guard-body">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка журнала защиты...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- TAB 8: Tenants (только владелец платформы) -->
+    <div id="panel-tenants" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Клиенты и их Telegram-боты
+          </div>
+          <div class="panel-subtitle">У каждого клиента свой бот, свои компании и свои данные. Токен бота выдаёт @BotFather.</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Клиент</th>
+              <th>Бот</th>
+              <th>Тариф</th>
+              <th>Расход (мес)</th>
+              <th>Статус</th>
+              <th>Компании</th>
+              <th>Пользователи</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="table-tenants-body">
+            <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:32px;">Загрузка клиентов...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-header" style="margin-top:28px;">
+        <div>
+          <div class="panel-title">Новый клиент</div>
+          <div class="panel-subtitle">Создаст клиента, его администратора и сразу запустит его бота</div>
+        </div>
+      </div>
+
+      <form id="form-tenant" onsubmit="createTenant(event)" class="form-grid">
+        <div class="form-group">
+          <label>Slug клиента *</label>
+          <input name="slug" required placeholder="avtoservis-1" pattern="[a-zA-Z0-9_-]{2,40}">
+        </div>
+        <div class="form-group">
+          <label>Название *</label>
+          <input name="name" required placeholder="Автосервис №1">
+        </div>
+        <div class="form-group">
+          <label>Бренд (в письмах и боте)</label>
+          <input name="brand_name" placeholder="АвтоПомощник">
+        </div>
+        <div class="form-group">
+          <label>Токен Telegram-бота</label>
+          <input name="telegram_bot_token" placeholder="123456:AA... (от @BotFather)">
+        </div>
+        <div class="form-group">
+          <label>Telegram ID владельца (куда слать заявки)</label>
+          <input name="owner_telegram_id" placeholder="123456789">
+        </div>
+        <div class="form-group">
+          <label>Логин администратора клиента</label>
+          <input name="admin_username" placeholder="avtoservis1_admin">
+        </div>
+        <div class="form-group">
+          <label>Пароль администратора (мин. 8 символов)</label>
+          <input name="admin_password" type="password" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label>Тариф клиента</label>
+          <select name="plan">
+            <option value="basic" selected>Базовый (1 000 сообщ.)</option>
+            <option value="pro">ПРО (5 000 сообщ. / 2990 ₽)</option>
+            <option value="internal">Внутренний (безлимит)</option>
+          </select>
+        </div>
+        <div class="form-group form-actions">
+          <button type="submit" class="btn btn-primary">Создать клиента</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- TAB: Usage & Tariffs (Блок B) -->
+    <div id="panel-usage" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Учёт токенов и расходы
+          </div>
+          <div class="panel-subtitle">Прозрачная статистика расхода токенов моделей, лимиты тарифа и затраты за месяц</div>
+        </div>
+        <div>
+          <select id="usage-period" onchange="loadUsage()" class="btn btn-secondary btn-sm" style="background:var(--bg-surface);">
+            <option value="7">За 7 дней</option>
+            <option value="30" selected>За 30 дней</option>
+            <option value="90">За 90 дней</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- KPI Usage Grid -->
+      <div class="kpi-grid" style="margin-bottom:24px;">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Сообщений LLM</span>
+            <div class="kpi-icon-wrap" style="color:var(--accent-blue);">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="usage-kpi-messages">0</div>
+          <div class="kpi-meta" id="usage-kpi-messages-meta">генераций ответа</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Всего токенов</span>
+            <div class="kpi-icon-wrap" style="color:var(--accent-cyan);">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="usage-kpi-tokens">0</div>
+          <div class="kpi-meta" id="usage-kpi-tokens-split">0 вход / 0 выход</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Расход (₽)</span>
+            <div class="kpi-icon-wrap" style="color:var(--primary);">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="usage-kpi-cost">0.00 ₽</div>
+          <div class="kpi-meta">по тарифам провайдера</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Лимит сообщений</span>
+            <div class="kpi-icon-wrap" style="color:var(--accent-amber);">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="usage-kpi-limit-val">—</div>
+          <div class="kpi-meta" id="usage-kpi-limit-meta">
+            <div style="background:rgba(255,255,255,0.08); border-radius:4px; height:6px; margin-top:6px; overflow:hidden;">
+              <div id="usage-kpi-progress" style="width:0%; height:100%; background:var(--primary); transition:width 0.3s;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Breakdown by Model -->
+      <div class="panel-header" style="margin-top:20px;">
+        <div class="panel-title" style="font-size:16px;">Расход по моделям</div>
+      </div>
+      <div class="table-responsive" style="margin-bottom:28px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Модель</th>
+              <th>Сообщений</th>
+              <th>Промпт токены</th>
+              <th>Ответ токены</th>
+              <th>Всего токенов</th>
+              <th>Расход (₽)</th>
+            </tr>
+          </thead>
+          <tbody id="table-usage-models-body">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Загрузка данных...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Platform Admin: All Tenants Table -->
+      <div id="usage-tenants-section" style="display:none; margin-top:28px;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title" style="font-size:16px;">Расход по клиентам платформы</div>
+            <div class="panel-subtitle">Контроль квот и биллинга каждого тенанта</div>
+          </div>
+        </div>
+        <div class="table-responsive" style="margin-bottom:28px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Тариф</th>
+                <th>Сообщений</th>
+                <th>Токенов</th>
+                <th>Расход (₽)</th>
+                <th>Лимит сообщений</th>
+                <th>Сменить тариф</th>
+              </tr>
+            </thead>
+            <tbody id="table-usage-tenants-body">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px;">Загрузка клиентов...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Model Pricing Configuration -->
+        <div class="panel-header">
+          <div>
+            <div class="panel-title" style="font-size:16px;">Цены моделей (₽ за 1 000 токенов)</div>
+            <div class="panel-subtitle">Используются для расчёта фактической себестоимости генераций</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Модель</th>
+                <th>Промпт (₽ / 1k)</th>
+                <th>Ответ (₽ / 1k)</th>
+                <th>Обновлено</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody id="table-model-prices-body">
+              <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">Загрузка цен...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast">
+    <svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <span id="toast-text"></span>
+  </div>
+
+  <script>
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(text) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-text').innerText = text;
+      t.style.display = 'inline-flex';
+      setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Скопировано в буфер обмена!');
+      }).catch(err => {
+        alert('Не удалось скопировать: ' + err);
+      });
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(name));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const panel = document.getElementById('panel-' + name);
+      if (panel) panel.classList.add('active');
+
+      if (name === 'leads') loadLeads();
+      if (name === 'sessions') loadSessions();
+      if (name === 'gaps') loadGaps();
+      if (name === 'companies') loadCompanies();
+      if (name === 'avito') loadAvitoConfig();
+      if (name === 'guard') loadGuardEvents();
+      if (name === 'tenants') loadTenants();
+      if (name === 'usage') loadUsage();
+    }
+
+    async function loadStats() {
+      try {
+        const r = await fetch('/api/stats');
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('kpi-leads').innerText = d.total_leads || 0;
+        document.getElementById('kpi-sessions').innerText = d.total_sessions || 0;
+        document.getElementById('kpi-gaps').innerText = d.pending_gaps || 0;
+        document.getElementById('kpi-companies').innerText = d.companies_count || 0;
+
+        document.getElementById('count-leads').innerText = d.total_leads || 0;
+        document.getElementById('count-sessions').innerText = d.total_sessions || 0;
+        document.getElementById('count-gaps').innerText = d.pending_gaps || 0;
+      } catch (err) {
+        console.error('Stats error:', err);
+      }
+    }
+
+    async function loadLeads() {
+      try {
+        const r = await fetch('/api/leads');
+        const data = await r.json();
+        const tbody = document.getElementById('table-leads-body');
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:32px;">Заявок пока нет. Протестируйте бота в Telegram или Авито!</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(l => {
+          const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : '-';
+          const srcBadge = l.channel === 'avito' 
+            ? '<span class="status-badge badge-avito">Авито</span>' 
+            : '<span class="status-badge badge-telegram">Telegram</span>';
+          const safePhoneUri = encodeURIComponent((l.phone || '').replace(/[^0-9+]/g, ''));
+          const safePhoneText = escapeHtml(l.phone || '');
+          const safeAvitoUrl = l.avito_chat_url ? escapeHtml(l.avito_chat_url) : '';
+          return `
+            <tr>
+              <td style="font-size: 12px; color: var(--text-muted); white-space:nowrap;">${dateStr}</td>
+              <td>${srcBadge}</td>
+              <td><span style="font-weight: 600;">${escapeHtml(l.company_slug)}</span></td>
+              <td>
+                <a href="tel:${safePhoneUri}" style="color: #34d399; font-weight: 700; text-decoration: none;">${safePhoneText}</a>
+                <button onclick="copyToClipboard('${safePhoneUri}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Копировать">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </td>
+              <td>
+                <div style="font-weight: 600;">${escapeHtml(l.client_name || 'Без имени')}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(l.car_model || '-')}</div>
+              </td>
+              <td>
+                <div>${escapeHtml(l.service_interest || '-')}</div>
+                ${l.estimated_price ? `<div style="font-size: 12px; color: var(--accent-amber); font-weight:600;">${escapeHtml(l.estimated_price)}</div>` : ''}
+              </td>
+              <td style="font-size: 13px; max-width: 280px;">
+                ${escapeHtml(l.summary || '-')}
+                ${safeAvitoUrl ? `<br><a href="${safeAvitoUrl}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;font-size:11px;">Открыть чат Авито ↗</a>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Leads error:', err);
+      }
+    }
+
+    async function loadSessions() {
+      try {
+        const r = await fetch('/api/sessions');
+        const data = await r.json();
+        const tbody = document.getElementById('table-sessions-body');
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">Диалогов пока нет.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(s => {
+          const dateStr = s.updated_at ? new Date(s.updated_at).toLocaleString('ru-RU') : '-';
+          const srcBadge = s.channel === 'avito' ? '<span class="status-badge badge-avito">Авито</span>' : '<span class="status-badge badge-telegram">Telegram</span>';
+          const isPaused = s.is_paused;
+          const statusHtml = isPaused 
+            ? `<span class="status-badge badge-pending">На паузе (до ${new Date(s.paused_until).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})})</span>` 
+            : '<span class="status-badge badge-learned">ИИ активен</span>';
+          const btnText = isPaused ? 'Возобновить ИИ' : 'Поставить на паузу 24ч';
+          const btnClass = isPaused ? 'btn-primary' : 'btn-secondary';
+          return `
+            <tr>
+              <td>${srcBadge}</td>
+              <td><code>${escapeHtml(s.chat_id)}</code></td>
+              <td>${escapeHtml(s.company_slug)}</td>
+              <td>${statusHtml}</td>
+              <td style="font-size: 12px; color: var(--text-muted);">${dateStr}</td>
+              <td>
+                <button class="btn ${btnClass} btn-sm" onclick="togglePause('${escapeHtml(s.channel)}', '${escapeHtml(s.chat_id)}')">
+                  ${btnText}
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Sessions error:', err);
+      }
+    }
+
+    async function togglePause(channel, chatId) {
+      try {
+        const r = await fetch(`/api/sessions/${channel}/${chatId}/pause`, { method: 'POST' });
+        const d = await r.json();
+        showToast(d.is_paused ? 'Чат поставлен на паузу на 24ч (ИИ не отвечает)' : 'ИИ возобновил работу в чате');
+        loadSessions();
+      } catch (err) {
+        alert('Ошибка при смене статуса: ' + err);
+      }
+    }
+
+    async function loadCompanies() {
+      try {
+        const r = await fetch('/api/companies');
+        const data = await r.json();
+        const tbody = document.getElementById('table-companies-body');
+        const avitoSelect = document.getElementById('avito-company-slug');
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:32px;">Компаний пока нет. Создайте первую во вкладке «Добавить компанию».</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(c => `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: #fff;">${escapeHtml(c.company_name)}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Мастер: ${escapeHtml(c.manager_name)} (${escapeHtml(c.manager_role)})</div>
+            </td>
+            <td>
+              <div>${escapeHtml(c.city)}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.niche)}</div>
+            </td>
+            <td>
+              <div style="font-size: 12px; color: #34d399;">${escapeHtml(c.media_reply_promise || 'в течение 15–20 мин')}</div>
+              <div style="font-size: 11px; color: var(--text-faint);">${escapeHtml(c.work_hours || '')}</div>
+            </td>
+            <td>
+              ${c.demo_link ? `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="text" value="${escapeHtml(c.demo_link)}" readonly style="font-size: 12px; padding: 6px 10px; width: 320px; background: rgba(0,0,0,0.25);">
+                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${escapeHtml(c.demo_link)}')">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Копировать
+                </button>
+              </div>` : `
+              <div style="font-size: 12px; color: var(--accent-amber);">
+                Нет своего Telegram-бота — клиент не может получать диалоги.
+                ${window.__isPlatformAdmin ? 'Подключите токен во вкладке «Клиенты и боты».' : 'Обратитесь к владельцу платформы.'}
+              </div>`}
+            </td>
+          </tr>
+        `).join('');
+
+        if (avitoSelect) {
+          avitoSelect.innerHTML = data.map(c => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.company_name)} (${escapeHtml(c.city)})</option>`).join('');
+        }
+      } catch (err) {
+        console.error('Companies error:', err);
+      }
+    }
+
+    async function loadGaps() {
+      try {
+        const r = await fetch('/api/gaps');
+        const data = await r.json();
+        const tbody = document.getElementById('table-gaps-body');
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Все вопросы клиентов закрыты! Пробелов в базе знаний нет.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(g => {
+          const isPending = g.status === 'pending';
+          const statusBadge = isPending ? '<span class="status-badge badge-pending">Ожидает ответа</span>' : '<span class="status-badge badge-learned">Изучено</span>';
+          return `
+            <tr>
+              <td><span style="font-weight:600;">${escapeHtml(g.company_slug)}</span></td>
+              <td style="font-weight:600; color:#fff;">${escapeHtml(g.question)}</td>
+              <td style="font-size:12px; color:var(--text-muted); max-width:250px;">${escapeHtml(g.customer_message)}</td>
+              <td>${statusBadge}</td>
+              <td>
+                ${isPending ? `
+                  <button class="btn btn-primary btn-sm" onclick="promptLearnGap(${g.id}, '${escapeHtml(g.question)}')">
+                    Обучить бота
+                  </button>
+                ` : `
+                  <div style="font-size:12px; color:#34d399;">Ответ: ${escapeHtml(g.suggested_answer)}</div>
+                `}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Gaps error:', err);
+      }
+    }
+
+    async function promptLearnGap(gapId, question) {
+      const answer = prompt(`Как бот должен правильно отвечать на вопрос:\n«${question}»?`);
+      if (!answer || !answer.trim()) return;
+
+      try {
+        const r = await fetch(`/api/gaps/${gapId}/learn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer: answer.trim() })
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          showToast('Бот обучен! Ответ добавлен в базу знаний компании.');
+          loadGaps();
+          loadStats();
+        } else {
+          alert('Ошибка: ' + (d.message || JSON.stringify(d)));
+        }
+      } catch (err) {
+        alert('Ошибка при обучении: ' + err);
+      }
+    }
+
+    async function loadGuardEvents() {
+      try {
+        const r = await fetch('/api/guard-events');
+        const data = await r.json();
+        const tbody = document.getElementById('table-guard-body');
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Галлюцинаций цен не зафиксировано. Все ответы соответствовали прайсу!</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(e => `
+          <tr>
+            <td style="font-size:12px; color:var(--text-muted); white-space:nowrap;">${new Date(e.created_at).toLocaleString('ru-RU')}</td>
+            <td><span style="font-weight:600;">${escapeHtml(e.company_slug)}</span> (${escapeHtml(e.channel)})</td>
+            <td><span class="status-badge" style="background:rgba(244,63,94,0.15); color:var(--accent-rose); border:1px solid rgba(244,63,94,0.3);">${escapeHtml(e.blocked_terms)}</span></td>
+            <td style="font-size:12px; color:var(--text-muted); max-width:250px;">${escapeHtml(e.original_reply)}</td>
+            <td style="font-size:12px; color:#34d399; max-width:250px;">${escapeHtml(e.safe_reply)}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Guard error:', err);
+      }
+    }
+
+    async function handleCreateCompany(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-company');
+      btn.disabled = true;
+      btn.innerText = 'Сохранение...';
+
+      const services = document.getElementById('fc-services').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const advantages = document.getElementById('fc-advantages').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const payload = {
+        company_name: document.getElementById('fc-name').value.trim(),
+        slug: document.getElementById('fc-slug').value.trim(),
+        city: document.getElementById('fc-city').value.trim(),
+        niche: document.getElementById('fc-niche').value.trim(),
+        manager_name: document.getElementById('fc-manager').value.trim() || 'Александр',
+        manager_role: document.getElementById('fc-role').value.trim() || 'старший мастер',
+        address: document.getElementById('fc-address').value.trim(),
+        work_hours: document.getElementById('fc-work-hours') ? document.getElementById('fc-work-hours').value.trim() : 'Ежедневно с 10:00 до 21:00',
+        media_reply_promise: document.getElementById('fc-media-promise') ? document.getElementById('fc-media-promise').value.trim() : 'в течение 15–20 минут в рабочее время',
+        services: services,
+        advantages: advantages,
+        discount_offer: document.getElementById('fc-discount').value.trim()
+      };
+
+      try {
+        const r = await fetch('/api/companies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          showToast('Компания создана! Ссылка готова.');
+          switchTab('companies');
+          loadStats();
+          copyToClipboard(d.demo_link);
+        } else {
+          alert('Ошибка: ' + (d.message || JSON.stringify(d)));
+        }
+      } catch (err) {
+        alert('Ошибка при сохранении: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Сохранить и получить ссылку';
+      }
+    }
+
+    async function loadAvitoConfig() {
+      try {
+        const r = await fetch('/api/avito/config');
+        const d = await r.json();
+        document.getElementById('avito-enabled').checked = d.avito_enabled;
+        document.getElementById('avito-client-id').value = d.avito_client_id || '';
+        document.getElementById('avito-user-id').value = d.avito_user_id || '';
+        if (d.avito_default_company_slug) {
+          document.getElementById('avito-company-slug').value = d.avito_default_company_slug;
+        }
+
+        const base = d.public_base_url ? d.public_base_url.replace(/\/$/, '') : window.location.origin;
+        document.getElementById('avito-webhook-url').value = base + d.webhook_path;
+      } catch (err) {
+        console.error('Avito config error:', err);
+      }
+    }
+
+    async function handleSaveAvitoConfig() {
+      const payload = {
+        avito_enabled: document.getElementById('avito-enabled').checked,
+        avito_client_id: document.getElementById('avito-client-id').value.trim(),
+        avito_user_id: parseInt(document.getElementById('avito-user-id').value.trim()) || null,
+        avito_default_company_slug: document.getElementById('avito-company-slug').value,
+        avito_manual_pause_hours: 24
+      };
+      const secret = document.getElementById('avito-client-secret').value.trim();
+      if (secret) payload.avito_client_secret = secret;
+
+      try {
+        const r = await fetch('/api/avito/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        showToast(d.message || 'Настройки сохранены!');
+      } catch (err) {
+        alert('Ошибка при сохранении: ' + err);
+      }
+    }
+
+    async function handleTestAvito() {
+      const payload = {
+        client_id: document.getElementById('avito-client-id').value.trim(),
+        client_secret: document.getElementById('avito-client-secret').value.trim() || null
+      };
+      try {
+        const r = await fetch('/api/avito/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        alert(d.message);
+      } catch (err) {
+        alert('Ошибка проверки связи: ' + err);
+      }
+    }
+
+    async function handleRegisterWebhook() {
+      const whUrl = document.getElementById('avito-webhook-url').value.trim();
+      const payload = {
+        webhook_url: whUrl,
+        client_id: document.getElementById('avito-client-id').value.trim() || null,
+        client_secret: document.getElementById('avito-client-secret').value.trim() || null
+      };
+      try {
+        const r = await fetch('/api/avito/register-webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        alert(d.message);
+      } catch (err) {
+        alert('Ошибка регистрации: ' + err);
+      }
+    }
+
+    function copyWebhookUrl() {
+      copyToClipboard(document.getElementById('avito-webhook-url').value);
+    }
+
+    function loadAllData() {
+      loadStats();
+      loadLeads();
+      loadCompanies();
+      if (window.__isPlatformAdmin) loadTenants();
+    }
+
+    // === Кабинет клиента: кто вошёл ===
+    async function loadMe() {
+      try {
+        const r = await fetch('/api/me');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        const me = await r.json();
+        window.__me = me;
+        window.__isPlatformAdmin = !!me.is_platform_admin;
+
+        document.getElementById('user-name').innerText = me.username;
+        const roleEl = document.getElementById('user-role');
+        const roleMap = {
+          platform_admin: 'владелец',
+          client_admin: 'админ клиента',
+          client_viewer: 'наблюдатель'
+        };
+        roleEl.innerText = roleMap[me.role] || me.role;
+        if (me.is_platform_admin) roleEl.classList.add('owner');
+
+        if (me.is_platform_admin) {
+          document.getElementById('tab-tenants-btn').style.display = '';
+        }
+
+        // Наблюдатель не может менять данные
+        if (!me.can_write) {
+          document.querySelectorAll('#form-tenant button, #create-company-form button').forEach(b => b.disabled = true);
+        }
+      } catch (err) {
+        console.error('Me error:', err);
+      }
+    }
+
+    // === Клиенты платформы (мультибот) ===
+    async function loadTenants() {
+      if (!window.__isPlatformAdmin) return;
+      try {
+        const r = await fetch('/api/tenants');
+        if (!r.ok) return;
+        const data = await r.json();
+        const tbody = document.getElementById('table-tenants-body');
+        document.getElementById('count-tenants').innerText = data.length || 0;
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">Клиентов пока нет</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(t => {
+          const botCell = t.bot_username
+            ? `<a href="https://t.me/${escapeHtml(t.bot_username)}" target="_blank">@${escapeHtml(t.bot_username)}</a>`
+            : (t.telegram_bot_token ? '<span style="color:var(--text-muted)">токен есть, бот не отвечает</span>' : '<span style="color:var(--text-muted)">не подключён</span>');
+          const statusBadge = t.bot_running
+            ? '<span class="status-badge badge-telegram">работает</span>'
+            : '<span class="status-badge badge-avito">остановлен</span>';
+          const companies = (t.companies || []).map(c => `<code>${escapeHtml(c)}</code>`).join(' ') || '—';
+          const users = (t.users || []).map(u => escapeHtml(u)).join(', ') || '—';
+          const isDefault = t.slug === 'default';
+          const planBadge = `<span class="status-badge badge-pending">${escapeHtml(t.plan_name || t.plan || 'Базовый')}</span>`;
+          const costStr = `${Number(t.month_cost_rub || 0).toFixed(2)} ₽`;
+          return `
+            <tr>
+              <td><b>${escapeHtml(t.name)}</b><br><span style="color:var(--text-muted); font-size:12px;">${escapeHtml(t.slug)}${isDefault ? ' · платформа' : ''}</span></td>
+              <td>${botCell}</td>
+              <td>${planBadge}</td>
+              <td><span style="font-family:var(--font-mono); font-weight:600;">${costStr}</span><br><span style="color:var(--text-muted); font-size:11px;">${t.month_messages || 0} сообщ.</span></td>
+              <td>${statusBadge}</td>
+              <td>${companies}</td>
+              <td style="font-size:12px;">${users}</td>
+              <td>
+                <button class="btn btn-secondary btn-sm" onclick="setTenantBot('${escapeHtml(t.slug)}')">Токен</button>
+                ${isDefault ? '' : `<button class="btn btn-secondary btn-sm" onclick="deleteTenant('${escapeHtml(t.slug)}')">Удалить</button>`}
+              </td>
+            </tr>`;
+        }).join('');
+      } catch (err) {
+        console.error('Tenants error:', err);
+      }
+    }
+
+    async function createTenant(event) {
+      event.preventDefault();
+      const form = event.target;
+      const fd = new FormData(form);
+      const payload = {
+        slug: (fd.get('slug') || '').trim(),
+        name: (fd.get('name') || '').trim(),
+        brand_name: (fd.get('brand_name') || '').trim(),
+        telegram_bot_token: (fd.get('telegram_bot_token') || '').trim(),
+        admin_username: (fd.get('admin_username') || '').trim() || null,
+        admin_password: (fd.get('admin_password') || '') || null
+      };
+      const ownerId = (fd.get('owner_telegram_id') || '').trim();
+      if (ownerId) payload.owner_telegram_id = parseInt(ownerId, 10);
+
+      try {
+        const r = await fetch('/api/tenants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast('Ошибка: ' + (data.detail || r.status)); return; }
+        showToast(data.message || 'Клиент создан');
+        form.reset();
+        loadTenants();
+      } catch (err) {
+        showToast('Ошибка сети: ' + err);
+      }
+    }
+
+    async function setTenantBot(slug) {
+      const token = prompt('Токен Telegram-бота от @BotFather (оставьте пустым, чтобы только проверить):');
+      if (token === null) return;
+      const ownerRaw = prompt('Telegram ID владельца для заявок (можно оставить пустым):', '');
+      const payload = { telegram_bot_token: (token || '').trim() };
+      if (ownerRaw && ownerRaw.trim()) payload.owner_telegram_id = parseInt(ownerRaw.trim(), 10);
+
+      try {
+        const r = await fetch(`/api/tenants/${encodeURIComponent(slug)}/bot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast('Ошибка: ' + (data.detail || r.status)); return; }
+        showToast(data.bot_running ? `Бот @${data.bot_username} запущен` : (data.message || 'Сохранено'));
+        loadTenants();
+      } catch (err) {
+        showToast('Ошибка сети: ' + err);
+      }
+    }
+
+    async function deleteTenant(slug) {
+      if (!confirm(`Удалить клиента «${slug}» вместе с его пользователями? Данные заявок останутся в базе.`)) return;
+      try {
+        const r = await fetch(`/api/tenants/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) { showToast('Ошибка: ' + (data.detail || r.status)); return; }
+        showToast('Клиент удалён');
+        loadTenants();
+      } catch (err) {
+        showToast('Ошибка сети: ' + err);
+      }
+    }
+
+    // === Учёт токенов и расходы (Блок B) ===
+    async function loadUsage() {
+      const days = document.getElementById('usage-period')?.value || 30;
+      try {
+        const r = await fetch(`/api/usage?days=${days}`);
+        if (!r.ok) return;
+        const d = await r.json();
+
+        document.getElementById('usage-kpi-messages').innerText = Number(d.messages || 0).toLocaleString('ru-RU');
+        document.getElementById('usage-kpi-tokens').innerText = Number(d.total_tokens || 0).toLocaleString('ru-RU');
+        document.getElementById('usage-kpi-tokens-split').innerText = `${Number(d.prompt_tokens || 0).toLocaleString('ru-RU')} вход / ${Number(d.completion_tokens || 0).toLocaleString('ru-RU')} выход`;
+        document.getElementById('usage-kpi-cost').innerText = `${Number(d.cost_rub || 0).toFixed(2)} ₽`;
+
+        // Models breakdown
+        const mbody = document.getElementById('table-usage-models-body');
+        if (!d.by_model || !d.by_model.length) {
+          mbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Нет данных об обращениях к LLM за выбранный период</td></tr>';
+        } else {
+          mbody.innerHTML = d.by_model.map(m => `
+            <tr>
+              <td><code>${escapeHtml(m.model)}</code></td>
+              <td>${Number(m.messages || 0).toLocaleString('ru-RU')}</td>
+              <td>${Number(m.prompt_tokens || 0).toLocaleString('ru-RU')}</td>
+              <td>${Number(m.completion_tokens || 0).toLocaleString('ru-RU')}</td>
+              <td><b>${Number(m.total_tokens || 0).toLocaleString('ru-RU')}</b></td>
+              <td><span style="font-family:var(--font-mono); color:var(--primary);">${Number(m.cost_rub || 0).toFixed(2)} ₽</span></td>
+            </tr>
+          `).join('');
+        }
+
+        // Platform admin sections
+        if (window.__isPlatformAdmin) {
+          const tenantsSec = document.getElementById('usage-tenants-section');
+          if (tenantsSec) tenantsSec.style.display = 'block';
+          await loadTenantsUsage(days);
+          await loadModelPrices();
+        }
+      } catch (err) {
+        console.error('Usage error:', err);
+      }
+    }
+
+    async function loadTenantsUsage(days = 30) {
+      try {
+        const [rTenants, rPlans] = await Promise.all([
+          fetch(`/api/usage/tenants?days=${days}`),
+          fetch('/api/plans')
+        ]);
+        if (!rTenants.ok) return;
+        const tenants = await rTenants.json();
+        const plans = rPlans.ok ? await rPlans.json() : [];
+
+        const tbody = document.getElementById('table-usage-tenants-body');
+        if (!tenants.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px;">Клиентов нет</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = tenants.map(t => {
+          const pct = t.limit_pct !== null ? `${t.limit_pct}%` : 'безлимит';
+          const planOpts = plans.map(p => `
+            <option value="${escapeHtml(p.slug)}" ${p.slug === t.plan ? 'selected' : ''}>
+              ${escapeHtml(p.name)}
+            </option>
+          `).join('');
+
+          return `
+            <tr>
+              <td><b>${escapeHtml(t.name)}</b><br><span style="color:var(--text-muted); font-size:12px;">${escapeHtml(t.tenant_slug)}</span></td>
+              <td><span class="status-badge badge-pending">${escapeHtml(t.plan_name)}</span></td>
+              <td>${Number(t.messages || 0).toLocaleString('ru-RU')}</td>
+              <td>${Number(t.tokens || 0).toLocaleString('ru-RU')}</td>
+              <td><span style="font-family:var(--font-mono); font-weight:600; color:var(--primary);">${Number(t.cost_rub || 0).toFixed(2)} ₽</span></td>
+              <td>
+                <span style="font-size:12px;">${t.included_messages ? `${t.messages} / ${t.included_messages} (${pct})` : 'Без лимита'}</span>
+                ${t.included_messages ? `
+                  <div style="background:rgba(255,255,255,0.08); border-radius:4px; height:5px; margin-top:4px; overflow:hidden;">
+                    <div style="width:${Math.min(100, t.limit_pct || 0)}%; height:100%; background:${(t.limit_pct || 0) > 80 ? 'var(--accent-rose)' : 'var(--primary)'};"></div>
+                  </div>` : ''}
+              </td>
+              <td>
+                <select class="btn btn-secondary btn-sm" onchange="changeTenantPlan('${escapeHtml(t.tenant_slug)}', this.value)" style="padding:4px 8px; font-size:12px;">
+                  ${planOpts}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Tenants usage error:', err);
+      }
+    }
+
+    async function changeTenantPlan(slug, plan) {
+      try {
+        const r = await fetch(`/api/tenants/${encodeURIComponent(slug)}/plan`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({plan})
+        });
+        if (r.ok) {
+          showToast(`Тариф клиента «${slug}» обновлен на «${plan}»`);
+          loadUsage();
+          loadTenants();
+        } else {
+          alert('Ошибка смены тарифа');
+        }
+      } catch (err) {
+        alert('Ошибка: ' + err);
+      }
+    }
+
+    async function loadModelPrices() {
+      try {
+        const r = await fetch('/api/model-prices');
+        if (!r.ok) return;
+        const prices = await r.json();
+        const tbody = document.getElementById('table-model-prices-body');
+        if (!prices.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">Цены пока не настроены (по умолчанию 0.00 ₽)</td></tr>';
+          return;
+        }
+        tbody.innerHTML = prices.map(p => `
+          <tr>
+            <td><code>${escapeHtml(p.model)}</code></td>
+            <td><input type="number" step="0.01" id="p-in-${escapeHtml(p.model)}" value="${p.prompt_rub_per_1k}" style="width:90px; padding:4px 8px; font-family:var(--font-mono); background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:#fff; border-radius:var(--radius-sm);"></td>
+            <td><input type="number" step="0.01" id="p-out-${escapeHtml(p.model)}" value="${p.completion_rub_per_1k}" style="width:90px; padding:4px 8px; font-family:var(--font-mono); background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:#fff; border-radius:var(--radius-sm);"></td>
+            <td style="font-size:12px; color:var(--text-muted);">${p.updated_at ? p.updated_at.substring(0, 10) : '—'}</td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="saveModelPrice('${escapeHtml(p.model)}')">Сохранить</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Model prices error:', err);
+      }
+    }
+
+    async function saveModelPrice(model) {
+      const pin = parseFloat(document.getElementById(`p-in-${model}`)?.value || 0);
+      const pout = parseFloat(document.getElementById(`p-out-${model}`)?.value || 0);
+      try {
+        const r = await fetch('/api/model-prices', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            model: model,
+            prompt_rub_per_1k: pin,
+            completion_rub_per_1k: pout
+          })
+        });
+        if (r.ok) {
+          showToast(`Цены для модели ${model} сохранены!`);
+          loadModelPrices();
+        } else {
+          alert('Ошибка сохранения цен');
+        }
+      } catch (err) {
+        alert('Ошибка: ' + err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadMe();
+      loadAllData();
+    });
+  </script>
+</body>
+</html>

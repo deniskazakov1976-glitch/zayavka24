@@ -1,0 +1,20 @@
+[Unit]
+Description=Zayavka 24/7 AI Bot and Avito Webhook Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/BotAvitoTelegram
+EnvironmentFile=/opt/BotAvitoTelegram/.env
+ExecStart=/opt/BotAvitoTelegram/.venv/bin/python main.py
+Restart=always
+RestartSec=5
+
+# Security sandbox
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

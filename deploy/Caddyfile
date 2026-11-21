@@ -1,0 +1,25 @@
+{$DOMAIN} {
+    # Public webhooks and healthcheck
+    handle /webhook/* {
+        reverse_proxy app:8080
+    }
+
+    handle /health {
+        reverse_proxy app:8080
+    }
+
+    # Public client landing page
+    handle /landing* {
+        reverse_proxy app:8080
+    }
+
+    # All other routes (Dashboard & internal APIs) are blocked from the outside world
+    handle {
+        respond "Access denied" 403
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

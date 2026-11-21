@@ -1,0 +1,40 @@
+# === Секреты: НИКОГДА в репозиторий ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# === Виртуальные окружения ===
+.venv/
+venv/
+env/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# === Данные и бэкапы (персональные данные клиентов) ===
+data/
+backups/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+*.zip
+
+# === Артефакты инструментов ===
+graphify-out/
+.pdca/
+.review/
+reports/
+
+# === Логи и временное ===
+*.log
+*.tmp
+Thumbs.db
+.DS_Store

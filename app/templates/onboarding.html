@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мастер запуска автобизнеса — Заявка 24/7</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #06080d;
+      --bg-surface: #0c1017;
+      --card-bg: #101622;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 255, 255, 0.16);
+      --primary: #00e599;
+      --primary-hover: #00ffaa;
+      --primary-glow: rgba(0, 229, 153, 0.25);
+      --accent-cyan: #06b6d4;
+      --accent-rose: #f43f5e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Manrope', sans-serif;
+      --font-mono: 'Space Grotesk', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 229, 153, 0.08), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(6, 182, 212, 0.05), transparent);
+    }
+
+    header {
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(12, 16, 23, 0.7);
+      backdrop-filter: blur(12px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #07090e;
+    }
+    .brand-name {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 20px;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Stepper Bar */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin-bottom: 36px;
+    }
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 30px;
+      right: 30px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      z-index: 1;
+    }
+    .step-item {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-base);
+      padding: 0 10px;
+      cursor: pointer;
+    }
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-faint);
+      transition: all 0.25s ease;
+    }
+    .step-item.active .step-circle {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #06080d;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+    .step-item.completed .step-circle {
+      background: rgba(0, 229, 153, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-faint);
+      transition: color 0.2s;
+    }
+    .step-item.active .step-label {
+      color: var(--text-main);
+    }
+
+    /* Wizard Box */
+    .wizard-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+    .wizard-title {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .wizard-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      padding: 12px 14px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.5;
+    }
+
+    .row-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .tag-item {
+      background: rgba(0, 229, 153, 0.1);
+      border: 1px solid rgba(0, 229, 153, 0.3);
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tag-remove {
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .tag-remove:hover { opacity: 1; }
+
+    /* Actions Footer */
+    .wizard-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--card-border);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #07090e;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--card-border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Step Panels */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    /* Test dialog box */
+    .chat-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      max-height: 260px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    .chat-msg {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-msg.user { align-items: flex-end; }
+    .chat-msg.assistant { align-items: flex-start; }
+    .msg-bubble {
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      line-height: 1.45;
+      max-width: 85%;
+    }
+    .chat-msg.user .msg-bubble {
+      background: #2563eb;
+      color: #fff;
+    }
+    .chat-msg.assistant .msg-bubble {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: #fff;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      border: 1px solid var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-name">Заявка 24/7 · Мастер запуска</div>
+    </a>
+    <div>
+      <a href="/" class="btn btn-secondary" style="padding:8px 16px; font-size:13px;">В кабинет</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Stepper Navigation -->
+    <div class="stepper">
+      <div class="step-item active" id="st-1" onclick="goToStep(1)">
+        <div class="step-circle">1</div>
+        <div class="step-label">Бизнес</div>
+      </div>
+      <div class="step-item" id="st-2" onclick="goToStep(2)">
+        <div class="step-circle">2</div>
+        <div class="step-label">Прайс</div>
+      </div>
+      <div class="step-item" id="st-3" onclick="goToStep(3)">
+        <div class="step-circle">3</div>
+        <div class="step-label">График</div>
+      </div>
+      <div class="step-item" id="st-4" onclick="goToStep(4)">
+        <div class="step-circle">4</div>
+        <div class="step-label">Тон</div>
+      </div>
+      <div class="step-item" id="st-5" onclick="goToStep(5)">
+        <div class="step-circle">5</div>
+        <div class="step-label">Запуск</div>
+      </div>
+    </div>
+
+    <!-- Wizard Card Form -->
+    <div class="wizard-card">
+      <!-- STEP 1: Business Details -->
+      <div class="step-panel active" id="panel-step-1">
+        <div class="wizard-title">Шаг 1. Данные компании</div>
+        <div class="wizard-desc">Укажите базовую информацию о вашей студии, чтобы бот точно знал, где вы находитесь и чем занимаетесь.</div>
+
+        <div class="form-group">
+          <label>Название автобизнеса *</label>
+          <input type="text" id="inp-company-name" placeholder="Например: Детейлинг студия Black Star">
+        </div>
+
+        <div class="row-grid">
+          <div class="form-group">
+            <label>Город *</label>
+            <input type="text" id="inp-city" placeholder="Москва">
+          </div>
+          <div class="form-group">
+            <label>Основная ниша</label>
+            <select id="inp-niche">
+              <option value="детейлинг">Детейлинг и полировка</option>
+              <option value="автосервис">Автосервис и техобслуживание</option>
+              <option value="кузовной ремонт">Кузовной ремонт и покраска</option>
+              <option value="шиномонтаж">Шиномонтаж и диски</option>
+              <option value="автозвук">Автозвук и дооснащение</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Фактический адрес бокса / сервиса</label>
+          <input type="text" id="inp-address" placeholder="ул. Ленина, д. 45, стр. 2 (заезд с торца)">
+        </div>
+      </div>
+
+      <!-- STEP 2: Price List -->
+      <div class="step-panel" id="panel-step-2">
+        <div class="wizard-title">Шаг 2. Прайс-лист и услуги</div>
+        <div class="wizard-desc">Вставьте ваш прайс из заметки, WhatsApp или Excel в любом виде. Наш парсер автоматически разберёт услуги и цены.</div>
+
+        <div class="form-group">
+          <label>Вставьте текст прайс-листа</label>
+          <textarea id="inp-price-raw" placeholder="Полировка кузова — от 15 000 ₽&#10;Керамика 9H: 25.000 руб&#10;Химчистка салона | 8 000&#10;Оклейка защитной плёнкой (капот) .... 22000р"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+          <button type="button" class="btn btn-secondary" onclick="parsePriceAction()" style="font-size:13px; padding:8px 16px;">
+            ⚡ Распознать услуги
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Распознанные услуги компании (<span id="services-count">0</span>):</label>
+          <div id="services-tag-list" class="tag-list">
+            <span style="color:var(--text-faint); font-size:13px;">Услуги пока не добавлены</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:16px;">
+          <label>Добавить услугу вручную</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="inp-manual-svc" placeholder="Удаление вмятин без покраски: от 3 000 ₽">
+            <button type="button" class="btn btn-secondary" onclick="addManualService()" style="flex-shrink:0;">Добавить</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Working Hours -->
+      <div class="step-panel" id="panel-step-3">
+        <div class="wizard-title">Шаг 3. График работы</div>
+        <div class="wizard-desc">Бот сообщает клиентам режим работы и автоматически предлагает запись в рабочие часы.</div>
+
+        <div class="form-group">
+          <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="inp-24h" style="width:auto;" onchange="toggle24h(this.checked)">
+            Круглосуточно (24/7 без выходных)
+          </label>
+        </div>
+
+        <div id="hours-custom-section">
+          <div class="row-grid">
+            <div class="form-group">
+              <label>Время открытия</label>
+              <input type="text" id="inp-open-time" value="09:00" placeholder="09:00">
+            </div>
+            <div class="form-group">
+              <label>Время закрытия</label>
+              <input type="text" id="inp-close-time" value="20:00" placeholder="20:00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Дни работы</label>
+            <input type="text" id="inp-work-days" value="Ежедневно без выходных" placeholder="Пн-Сб, Вс — выходной">
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Tone and Personalization -->
+      <div class="step-panel" id="panel-step-4">
+        <div class="wizard-title">Шаг 4. Имя менеджера и тон диалога</div>
+        <div class="wizard-desc">Персонализируйте обращение. Клиенты гораздо охотнее оставляют контакты живому человеку или старшему мастеру.</div>
+
+        <div class="row-grid">
+          <div class="form-group">
+            <label>Имя старшего мастера / менеджера</label>
+            <input type="text" id="inp-mgr-name" value="Александр" placeholder="Александр">
+          </div>
+          <div class="form-group">
+            <label>Должность / роль</label>
+            <input type="text" id="inp-mgr-role" value="старший мастер-приёмщик" placeholder="старший мастер">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Лид-магнит / Скидка на первое обращение</label>
+          <input type="text" id="inp-discount" value="скидку 10% на первый визит" placeholder="бесплатный осмотр на подъёмнике">
+        </div>
+
+        <div class="form-group">
+          <label>Обещание ответа при отправке фото повреждения</label>
+          <input type="text" id="inp-promise" value="в течение 15–30 минут в рабочее время" placeholder="в течение 20 минут">
+        </div>
+      </div>
+
+      <!-- STEP 5: Verification & Launch -->
+      <div class="step-panel" id="panel-step-5">
+        <div class="wizard-title">Шаг 5. Проверка и запуск компании</div>
+        <div class="wizard-desc">Протестируйте ответы вашего искусственного интеллекта прямо сейчас перед подключением к клиентам.</div>
+
+        <div class="form-group">
+          <label>Приветствие нового клиента:</label>
+          <div id="greeting-preview" style="background:rgba(255,255,255,0.04); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px; font-size:13.5px; line-height:1.5;">
+            —
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Тестовый диалог с ботом по вашему прайсу:</label>
+          <div class="chat-box" id="test-chat-box">
+            <div class="chat-msg assistant">
+              <div class="msg-bubble" id="chat-first-msg">Приветствие загружается...</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="inp-test-msg" placeholder="Например: Сколько стоит полировка и есть ли скидка?" onkeydown="if(event.key==='Enter') sendTestMsg()">
+            <button type="button" class="btn btn-secondary" onclick="sendTestMsg()" style="flex-shrink:0;">Спросить</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons Footer -->
+      <div class="wizard-actions">
+        <button type="button" class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="display:none;">
+          ← Назад
+        </button>
+        <div></div>
+        <button type="button" class="btn btn-primary" id="btn-next" onclick="nextStep()">
+          Далее →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    let currentStep = 1;
+    let draft = {
+      services: [],
+      advantages: []
+    };
+
+    function showToast(text) {
+      const t = document.getElementById('toast');
+      t.innerText = text;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    function renderServices() {
+      const el = document.getElementById('services-tag-list');
+      const countEl = document.getElementById('services-count');
+      countEl.innerText = draft.services.length;
+      if (!draft.services.length) {
+        el.innerHTML = '<span style="color:var(--text-faint); font-size:13px;">Услуги пока не добавлены</span>';
+        return;
+      }
+      el.innerHTML = draft.services.map((s, idx) => `
+        <div class="tag-item">
+          <span>${escapeHtml(s)}</span>
+          <span class="tag-remove" onclick="removeService(${idx})">✕</span>
+        </div>
+      `).join('');
+    }
+
+    function removeService(idx) {
+      draft.services.splice(idx, 1);
+      renderServices();
+    }
+
+    function addManualService() {
+      const inp = document.getElementById('inp-manual-svc');
+      const val = inp.value.trim();
+      if (!val) return;
+      draft.services.push(val);
+      inp.value = '';
+      renderServices();
+    }
+
+    function toggle24h(checked) {
+      const sec = document.getElementById('hours-custom-section');
+      sec.style.opacity = checked ? '0.3' : '1';
+      sec.style.pointerEvents = checked ? 'none' : 'auto';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function parsePriceAction() {
+      const rawText = document.getElementById('inp-price-raw').value.trim();
+      if (!rawText) {
+        showToast('Пожалуйста, вставьте текст прайс-листа');
+        return;
+      }
+      try {
+        const r = await fetch('/api/onboarding/parse-price', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text: rawText})
+        });
+        if (!r.ok) {
+          showToast('Ошибка распознавания');
+          return;
+        }
+        const data = await r.json();
+        if (data.services && data.services.length) {
+          data.services.forEach(s => {
+            if (!draft.services.includes(s)) draft.services.push(s);
+          });
+          renderServices();
+          showToast(`Распознано услуг: ${data.services.length}`);
+        } else {
+          showToast('Не удалось выделить услуги с ценами. Проверьте формат.');
+        }
+      } catch (err) {
+        showToast('Ошибка сети: ' + err);
+      }
+    }
+
+    function updatePreview() {
+      const comp = document.getElementById('inp-company-name').value.trim() || 'Студия детейлинга';
+      const city = document.getElementById('inp-city').value.trim() || 'Москва';
+      const mgr = document.getElementById('inp-mgr-name').value.trim() || 'Александр';
+      const role = document.getElementById('inp-mgr-role').value.trim() || 'старший мастер';
+      const disc = document.getElementById('inp-discount').value.trim() || 'скидку 10%';
+
+      const greeting = `Здравствуйте! На связи ${role} ${mgr} студии «${comp}» (${city}). Сориентирую вас по точной стоимости и зафиксирую ${disc}. Подскажите, какая услуга вас интересует?`;
+      document.getElementById('greeting-preview').innerText = greeting;
+      document.getElementById('chat-first-msg').innerText = greeting;
+    }
+
+    async function sendTestMsg() {
+      const inp = document.getElementById('inp-test-msg');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+
+      const box = document.getElementById('test-chat-box');
+      box.innerHTML += `
+        <div class="chat-msg user">
+          <div class="msg-bubble">${escapeHtml(text)}</div>
+        </div>
+      `;
+      box.scrollTop = box.scrollHeight;
+
+      // Temporary typing placeholder
+      const loadingId = 'loading-' + Date.now();
+      box.innerHTML += `
+        <div class="chat-msg assistant" id="${loadingId}">
+          <div class="msg-bubble" style="color:var(--text-faint);">Печатает ответ...</div>
+        </div>
+      `;
+      box.scrollTop = box.scrollHeight;
+
+      try {
+        const r = await fetch('/api/onboarding/test-dialog', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({message: text})
+        });
+        const loadEl = document.getElementById(loadingId);
+        if (r.ok) {
+          const d = await r.json();
+          if (loadEl) loadEl.innerHTML = `<div class="msg-bubble">${escapeHtml(d.reply)}</div>`;
+        } else {
+          if (loadEl) loadEl.innerHTML = `<div class="msg-bubble" style="color:var(--accent-rose);">Ошибка генерации ответа</div>`;
+        }
+      } catch (err) {
+        const loadEl = document.getElementById(loadingId);
+        if (loadEl) loadEl.innerHTML = `<div class="msg-bubble" style="color:var(--accent-rose);">Ошибка сети</div>`;
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function collectCurrentStepData() {
+      if (currentStep === 1) {
+        draft.company_name = document.getElementById('inp-company-name').value.trim();
+        draft.city = document.getElementById('inp-city').value.trim();
+        draft.niche = document.getElementById('inp-niche').value;
+        draft.address = document.getElementById('inp-address').value.trim();
+      } else if (currentStep === 3) {
+        const is24 = document.getElementById('inp-24h').checked;
+        if (is24) {
+          draft.work_hours = 'Круглосуточно 24/7 без выходных';
+        } else {
+          const o = document.getElementById('inp-open-time').value.trim() || '09:00';
+          const c = document.getElementById('inp-close-time').value.trim() || '20:00';
+          const d = document.getElementById('inp-work-days').value.trim() || 'Ежедневно';
+          draft.work_hours = `${d} с ${o} до ${c}`;
+        }
+      } else if (currentStep === 4) {
+        draft.manager_name = document.getElementById('inp-mgr-name').value.trim();
+        draft.manager_role = document.getElementById('inp-mgr-role').value.trim();
+        draft.discount_offer = document.getElementById('inp-discount').value.trim();
+        draft.media_reply_promise = document.getElementById('inp-promise').value.trim();
+      }
+    }
+
+    async function saveStep(step) {
+      collectCurrentStepData();
+      try {
+        await fetch('/api/onboarding/step', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({step: step, data: draft})
+        });
+      } catch (err) {
+        console.error('Save step error:', err);
+      }
+    }
+
+    function goToStep(step) {
+      if (step > currentStep) {
+        if (!validateStep(currentStep)) return;
+      }
+      collectCurrentStepData();
+      currentStep = step;
+      renderStep();
+      saveStep(currentStep);
+    }
+
+    function validateStep(step) {
+      if (step === 1) {
+        const name = document.getElementById('inp-company-name').value.trim();
+        const city = document.getElementById('inp-city').value.trim();
+        if (!name || !city) {
+          showToast('Пожалуйста, заполните название компании и город');
+          return false;
+        }
+      } else if (step === 2) {
+        if (!draft.services.length) {
+          showToast('Пожалуйста, добавьте хотя бы 1 услугу с ценой');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function nextStep() {
+      if (!validateStep(currentStep)) return;
+      if (currentStep === 5) {
+        completeOnboarding();
+        return;
+      }
+      currentStep++;
+      renderStep();
+      saveStep(currentStep);
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        renderStep();
+        saveStep(currentStep);
+      }
+    }
+
+    function renderStep() {
+      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.step-item').forEach((item, idx) => {
+        item.classList.remove('active');
+        if (idx + 1 < currentStep) item.classList.add('completed');
+        else item.classList.remove('completed');
+        if (idx + 1 === currentStep) item.classList.add('active');
+      });
+
+      const currentPanel = document.getElementById(`panel-step-${currentStep}`);
+      if (currentPanel) currentPanel.classList.add('active');
+
+      document.getElementById('btn-back').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+      const nextBtn = document.getElementById('btn-next');
+      if (currentStep === 5) {
+        nextBtn.innerText = '🚀 Создать компанию и запустить';
+        updatePreview();
+      } else {
+        nextBtn.innerText = 'Далее →';
+      }
+    }
+
+    async function completeOnboarding() {
+      collectCurrentStepData();
+      try {
+        const r = await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        const data = await r.json();
+        if (r.ok && data.status === 'ok') {
+          showToast(`Компания создана! Ссылка: ${data.slug}`);
+          setTimeout(() => {
+            window.location.href = '/?welcome=' + encodeURIComponent(data.slug);
+          }, 1200);
+        } else {
+          showToast('Ошибка создания компании: ' + (data.detail || 'неизвестная ошибка'));
+        }
+      } catch (err) {
+        showToast('Ошибка сети: ' + err);
+      }
+    }
+
+    // Load initial draft from server
+    async function loadInitial() {
+      try {
+        const r = await fetch('/api/onboarding');
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.draft) {
+          draft = Object.assign(draft, d.draft);
+          if (draft.company_name) document.getElementById('inp-company-name').value = draft.company_name;
+          if (draft.city) document.getElementById('inp-city').value = draft.city;
+          if (draft.niche) document.getElementById('inp-niche').value = draft.niche;
+          if (draft.address) document.getElementById('inp-address').value = draft.address;
+          if (draft.manager_name) document.getElementById('inp-mgr-name').value = draft.manager_name;
+          if (draft.manager_role) document.getElementById('inp-mgr-role').value = draft.manager_role;
+          if (draft.discount_offer) document.getElementById('inp-discount').value = draft.discount_offer;
+          if (draft.media_reply_promise) document.getElementById('inp-promise').value = draft.media_reply_promise;
+          renderServices();
+        }
+        if (d.step && d.step >= 1 && d.step <= 5) {
+          currentStep = d.step;
+        }
+        renderStep();
+      } catch (err) {
+        console.error('Load onboarding error:', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadInitial);
+  </script>
+</body>
+</html>
