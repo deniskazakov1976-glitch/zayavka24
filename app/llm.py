@@ -155,11 +155,12 @@ class LLMService:
         company: CompanyProfile,
         history: List[ConversationMessage],
         user_message: str,
-        channel: str,
-        chat_id: str,
+        channel: str = "telegram",
+        chat_id: str = "demo",
         client_name_hint: str = "",
         avito_chat_url: str = "",
         image_url: Optional[str] = None,
+        tenant_slug: Optional[str] = None,
     ) -> LLMReply:
         system_prompt = build_system_prompt(company)
         messages: list[dict] = [{"role": "system", "content": system_prompt}]
@@ -369,7 +370,7 @@ class LLMService:
             if self.storage:
                 p_rub, c_rub = self.storage.get_model_price(self.model)
                 cost_rub = round((prompt_tokens / 1000.0) * p_rub + (completion_tokens / 1000.0) * c_rub, 4)
-                t_slug = getattr(company, "tenant_slug", None) or "default"
+                t_slug = tenant_slug or getattr(company, "tenant_slug", None) or "default"
                 self.storage.record_llm_usage(
                     tenant_slug=t_slug,
                     company_slug=company.slug,

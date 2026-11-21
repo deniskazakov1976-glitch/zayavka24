@@ -1033,6 +1033,8 @@ def build_dashboard_router(
                 company=target_company,
                 history=history_msgs,
                 user_message=req.message,
+                channel="telegram",
+                chat_id="simulator_demo",
                 tenant_slug="simulator",
             )
             reply_text = reply_obj.text
