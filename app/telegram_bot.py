@@ -35,6 +35,33 @@ _saas_wizard: Dict[str, Dict[str, Any]] = {}
 _pending_wow: Dict[str, Dict[str, str]] = {}
 
 
+def _platform_menu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚗 Протестировать диалог как клиент", callback_data="demo:test")],
+        [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
+        [InlineKeyboardButton(text="💰 Тарифы и окупаемость", callback_data="demo:pricing")],
+        [InlineKeyboardButton(text="📞 Связаться с основателем", callback_data="demo:contact")],
+    ])
+
+
+def _test_scenarios_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="«Покрась бампер на Toyota Camry»", callback_data="demo:q1")],
+        [InlineKeyboardButton(text="«Оклейка зон риска на Geely Monjaro»", callback_data="demo:q2")],
+        [InlineKeyboardButton(text="«Работаете в воскресенье?»", callback_data="demo:q3")],
+        [InlineKeyboardButton(text="«Сделайте скидку 50%!»", callback_data="demo:q4")],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
+    ])
+
+
+def _trial_cta_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
+    ])
+
+
+
 class RateLimiter:
     """Simple per-chat rate limiter to protect LLM API balance from spam."""
 
@@ -84,29 +111,6 @@ def build_telegram_router(
     # ---------------------------------------------------------------------------
     # Вспомогательные функции для demo-воронки платформы
     # ---------------------------------------------------------------------------
-
-    def _platform_menu_keyboard() -> InlineKeyboardMarkup:
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚗 Протестировать диалог как клиент", callback_data="demo:test")],
-            [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
-            [InlineKeyboardButton(text="💰 Тарифы и окупаемость", callback_data="demo:pricing")],
-            [InlineKeyboardButton(text="📞 Связаться с основателем", callback_data="demo:contact")],
-        ])
-
-    def _test_scenarios_keyboard() -> InlineKeyboardMarkup:
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="«Покрась бампер на Toyota Camry»", callback_data="demo:q1")],
-            [InlineKeyboardButton(text="«Оклейка зон риска на Geely Monjaro»", callback_data="demo:q2")],
-            [InlineKeyboardButton(text="«Работаете в воскресенье?»", callback_data="demo:q3")],
-            [InlineKeyboardButton(text="«Сделайте скидку 50%!»", callback_data="demo:q4")],
-            [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
-        ])
-
-    def _trial_cta_keyboard() -> InlineKeyboardMarkup:
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
-            [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
-        ])
 
     def _is_demo_mode(chat_id: str) -> bool:
         """Пользователь вошёл через /start demo с лендинга."""
