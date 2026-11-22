@@ -500,10 +500,18 @@
       text-align: left;
     }
 
+    .typing-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
     .typing-dots {
       display: inline-flex;
       gap: 4px;
-      padding: 4px 8px;
+      padding: 4px 2px;
+      flex-shrink: 0;
     }
     .typing-dots span {
       width: 6px;
@@ -517,6 +525,12 @@
     @keyframes dotBounce {
       0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
       40% { transform: translateY(-4px); opacity: 1; }
+    }
+    .typing-status-text {
+      font-size: 0.80rem;
+      font-weight: 500;
+      color: #94a3b8;
+      letter-spacing: -0.01em;
     }
 
     .messenger-input {
@@ -1336,9 +1350,30 @@
 
     let simHistory = [];
 
+    const simStatusPhrases = [
+      "Мастер изучает ваш вопрос...",
+      "Сверяю с прайс-листом студии...",
+      "Уточняю расход плёнки и материалов...",
+      "Рассчитываю вилку цен под модель авто...",
+      "Мастер печатает ответ..."
+    ];
+
     async function requestSimulatorReply(userText, typingId) {
       simHistory.push({ role: 'user', content: userText });
       const chat = document.getElementById('chat-stream');
+
+      let phraseIdx = 0;
+      const statusTimer = setInterval(() => {
+        phraseIdx = (phraseIdx + 1) % simStatusPhrases.length;
+        const el = document.getElementById(typingId + '-status');
+        if (el) el.textContent = simStatusPhrases[phraseIdx];
+      }, 3500);
+
+      const cleanupTyping = () => {
+        clearInterval(statusTimer);
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+      };
 
       try {
         const apiEndpoint = (window.location.origin.includes('github.io') || window.location.protocol === 'file:')
@@ -1355,8 +1390,7 @@
           })
         });
 
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
+        cleanupTyping();
 
         if (resp.ok) {
           const data = await resp.json();
@@ -1375,8 +1409,7 @@
         }
       } catch (err) {
         console.warn('Simulator fallback to offline:', err);
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
+        cleanupTyping();
 
         const phoneMatch = userText.match(/(\+7|8)[\s\-]?[0-9]{3}[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}/);
         if (phoneMatch) {
@@ -1405,7 +1438,10 @@
       const typingId = 'typing-' + Date.now();
       chat.innerHTML += `
         <div class="msg msg-bot" id="${typingId}">
-          <div class="typing-dots"><span></span><span></span><span></span></div>
+          <div class="typing-box">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+            <span class="typing-status-text" id="${typingId}-status">Мастер изучает ваш вопрос...</span>
+          </div>
         </div>`;
       chat.scrollTop = chat.scrollHeight;
 
@@ -1424,7 +1460,10 @@
       const typingId = 'typing-' + Date.now();
       chat.innerHTML += `
         <div class="msg msg-bot" id="${typingId}">
-          <div class="typing-dots"><span></span><span></span><span></span></div>
+          <div class="typing-box">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+            <span class="typing-status-text" id="${typingId}-status">Мастер изучает ваш вопрос...</span>
+          </div>
         </div>`;
       chat.scrollTop = chat.scrollHeight;
 
