@@ -147,6 +147,12 @@ class SimulatorChatRequest(BaseModel):
     company_slug: str = "detailing_premium"
 
 
+class LandingLeadRequest(BaseModel):
+    phone: str = Field(..., min_length=5, max_length=50)
+    name: str = Field(default="", max_length=100)
+    service: str = Field(default="", max_length=200)
+
+
 TRANSLIT_MAP = {
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
     'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
@@ -958,7 +964,11 @@ def build_dashboard_router(
 
     # === Страницы ===
     @router.get("/", response_class=HTMLResponse)
-    async def dashboard_html(user: CurrentUser = Depends(current_user)) -> Any:
+    async def dashboard_html(request: Request) -> Any:
+        user = auth_service.get_user_from_cookie(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
         tenant_slug = user.tenant_slug
         if tenant_slug and not user.is_platform_admin:
             companies = company_store.list_for_tenant(tenant_slug)
@@ -967,7 +977,10 @@ def build_dashboard_router(
         return get_dashboard_html(_resolve_bot_username(tenant_slug))
 
     @router.get("/onboarding", response_class=HTMLResponse)
-    async def onboarding_page(user: CurrentUser = Depends(current_user)) -> str:
+    async def onboarding_page(request: Request) -> Any:
+        user = auth_service.get_user_from_cookie(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
         tenant_slug = user.tenant_slug
         return get_onboarding_html(_resolve_bot_username(tenant_slug))
 
@@ -977,7 +990,11 @@ def build_dashboard_router(
     @router.post("/api/simulator/chat")
     async def api_simulator_chat(req: SimulatorChatRequest, request: Request) -> Dict[str, Any]:
         # 1. Защита от спама и перерасхода токенов: лимит 30 сообщений в минуту на 1 IP
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = (
+            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            or request.headers.get("x-real-ip", "").strip()
+            or (request.client.host if request.client else "unknown")
+        )
         now = time.time()
         timestamps = _sim_rate_limits.setdefault(client_ip, [])
         _sim_rate_limits[client_ip] = [t for t in timestamps if now - t < 60]
@@ -1063,6 +1080,44 @@ def build_dashboard_router(
                 "lead_captured": False,
                 "phone": None,
             }
+
+    @router.post("/api/landing/lead")
+    async def api_landing_lead(req: LandingLeadRequest, request: Request) -> Dict[str, Any]:
+        client_ip = (
+            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            or request.headers.get("x-real-ip", "").strip()
+            or (request.client.host if request.client else "unknown")
+        )
+        # Rate limit: max 5 form submissions per minute per IP
+        now = time.time()
+        timestamps = _sim_rate_limits.setdefault(f"lead_{client_ip}", [])
+        _sim_rate_limits[f"lead_{client_ip}"] = [t for t in timestamps if now - t < 60]
+        if len(_sim_rate_limits[f"lead_{client_ip}"]) >= 5:
+            raise HTTPException(status_code=429, detail="Слишком много заявок с вашего адреса. Мы уже получили ваш номер!")
+        _sim_rate_limits[f"lead_{client_ip}"].append(now)
+
+        from app.models import LeadInfo
+        lead = LeadInfo(
+            channel="telegram",
+            chat_id=f"web_{int(now)}",
+            company_slug="detailing_premium",
+            client_name=req.name.strip() or "Заявка с сайта",
+            phone=req.phone.strip(),
+            car_model="",
+            service_interest=req.service.strip() or "Тест-драйв 3 дня (с сайта)",
+            estimated_price="",
+            preferred_time="",
+            summary=f"Лид из веб-формы лендинга (IP: {client_ip})",
+        )
+        try:
+            storage.save_lead(lead)
+        except Exception as exc:
+            logger.warning("Could not persist landing lead: %s", exc)
+
+        return {
+            "status": "ok",
+            "message": "Заявка успешно принята! Основатель свяжется с вами в течение 10 минут."
+        }
 
     @router.get("/landing", response_class=HTMLResponse)
     async def landing_html() -> str:

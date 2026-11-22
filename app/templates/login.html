@@ -3,56 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Вход — Заявка 24/7</title>
+<title>Вход в панель управления — Заявка 24/7</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(circle at 20% 20%, #1b2a4a 0%, #0d1320 55%, #070a12 100%);
+    background: radial-gradient(circle at 50% 20%, #0d233a 0%, #080f1a 50%, #050811 100%);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #e6edf7;
     padding: 24px;
   }
   .card {
-    width: 100%; max-width: 380px; background: rgba(19,26,40,.92); border: 1px solid #24304a;
-    border-radius: 18px; padding: 32px 28px; box-shadow: 0 24px 60px rgba(0,0,0,.55);
+    width: 100%; max-width: 400px; background: rgba(15, 23, 42, 0.94); border: 1px solid #1e293b;
+    border-radius: 20px; padding: 36px 30px; box-shadow: 0 25px 65px rgba(0,0,0,0.65);
+    backdrop-filter: blur(16px);
   }
-  h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -.2px; }
-  p.sub { margin: 0 0 26px; color: #8b9bb4; font-size: 14px; }
-  label { display: block; font-size: 13px; color: #a9b7cc; margin: 0 0 6px; }
+  .brand-badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px;
+    background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981; font-size: 12px; font-weight: 600; margin-bottom: 14px;
+  }
+  h1 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: -0.3px; color: #fff; }
+  p.sub { margin: 0 0 24px; color: #94a3b8; font-size: 14px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #cbd5e1; margin: 0 0 6px; }
   input {
-    width: 100%; padding: 12px 14px; margin-bottom: 16px; border-radius: 10px;
-    border: 1px solid #2b3852; background: #0f1626; color: #e6edf7; font-size: 15px;
+    width: 100%; padding: 13px 15px; margin-bottom: 18px; border-radius: 10px;
+    border: 1px solid #334155; background: #0b1120; color: #f8fafc; font-size: 15px;
+    transition: all 0.15s ease;
   }
-  input:focus { outline: none; border-color: #4c7dff; box-shadow: 0 0 0 3px rgba(76,125,255,.18); }
+  input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
   button {
-    width: 100%; padding: 13px; border: 0; border-radius: 10px; cursor: pointer;
-    background: linear-gradient(180deg, #4c7dff, #3a63d8); color: #fff;
-    font-size: 15px; font-weight: 600; letter-spacing: .2px;
+    width: 100%; padding: 14px; border: 0; border-radius: 10px; cursor: pointer;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.2px;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); transition: all 0.15s ease;
   }
-  button:hover { filter: brightness(1.08); }
+  button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
   .error {
-    background: rgba(255,77,90,.12); border: 1px solid rgba(255,77,90,.4); color: #ff8b95;
-    padding: 10px 12px; border-radius: 9px; font-size: 13px; margin-bottom: 18px;
+    background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;
+    padding: 11px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 20px; line-height: 1.4;
   }
-  .hint { margin-top: 18px; font-size: 12px; color: #6f7f96; text-align: center; }
+  .hint { margin-top: 20px; font-size: 12px; color: #64748b; text-align: center; }
+  .back-link {
+    display: block; margin-top: 16px; text-align: center; font-size: 13px;
+    color: #38bdf8; text-decoration: none; transition: opacity 0.15s;
+  }
+  .back-link:hover { opacity: 0.8; text-decoration: underline; }
 </style>
 </head>
 <body>
   <form class="card" method="post" action="/login">
-    <h1>Заявка 24/7</h1>
-    <p class="sub">Вход в кабинет</p>
+    <div class="brand-badge">⚡ Заявка 24/7</div>
+    <h1>Панель управления</h1>
+    <p class="sub">Вход для администратора и клиентов</p>
     <div class="error" id="err" style="display:none">Неверный логин или пароль</div>
     <label for="username">Логин</label>
-    <input id="username" name="username" autocomplete="username" required autofocus>
+    <input id="username" name="username" autocomplete="username" placeholder="Ваш логин" required autofocus>
     <label for="password">Пароль</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button type="submit">Войти</button>
-    <div class="hint">Доступ выдаёт владелец платформы</div>
+    <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+    <button type="submit">Войти в кабинет</button>
+    <div class="hint">Доступ для клиентов выдаётся администратором сервиса</div>
+    <a href="/landing" class="back-link">← Вернуться на главную страницу</a>
   </form>
   <script>
-    if (new URLSearchParams(location.search).has('error')) {
-      document.getElementById('err').style.display = 'block';
+    const errCode = new URLSearchParams(location.search).get('error');
+    if (errCode) {
+      const el = document.getElementById('err');
+      if (errCode === '429') {
+        el.innerText = 'Слишком много попыток входа. Попробуйте через 10 минут.';
+      } else {
+        el.innerText = 'Неверный логин или пароль. Проверьте данные.';
+      }
+      el.style.display = 'block';
     }
   </script>
 </body>

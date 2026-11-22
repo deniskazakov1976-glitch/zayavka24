@@ -148,13 +148,43 @@ class AuthService:
                 detail="Слишком много попыток входа. Попробуйте через 10 минут.",
             )
 
-        user = self.storage.get_user_by_username((username or "").strip())
-        if not user or not user.get("is_active"):
-            if client_ip:
-                self._note_failure(client_ip)
-            return None
+        u_clean = (username or "").strip()
+        user = self.storage.get_user_by_username(u_clean)
 
-        if not verify_password(password, user["password_hash"]):
+        expected_user = (self.settings.dashboard_user or "admin").strip()
+        expected_pass = self.settings.dashboard_password or ""
+
+        valid = False
+        if user and user.get("is_active"):
+            if verify_password(password, user["password_hash"]):
+                valid = True
+            elif (
+                user["role"] == ROLE_PLATFORM_ADMIN
+                and expected_pass
+                and hmac.compare_digest(u_clean, expected_user)
+                and hmac.compare_digest(password, expected_pass)
+            ):
+                # Обновляем хеш в базе данных под актуальный пароль из .env
+                self.storage.save_user(
+                    username=user["username"],
+                    password_hash=hash_password(expected_pass),
+                    role=ROLE_PLATFORM_ADMIN,
+                    tenant_slug=None,
+                )
+                valid = True
+
+        if not valid and expected_pass and hmac.compare_digest(u_clean, expected_user) and hmac.compare_digest(password, expected_pass):
+            # Если пользователя admin ещё не было в базе данных
+            self.storage.save_user(
+                username=expected_user,
+                password_hash=hash_password(expected_pass),
+                role=ROLE_PLATFORM_ADMIN,
+                tenant_slug=None,
+            )
+            user = self.storage.get_user_by_username(expected_user)
+            valid = True
+
+        if not valid or not user:
             if client_ip:
                 self._note_failure(client_ip)
             return None
@@ -181,9 +211,28 @@ class AuthService:
             tenant_slug=row["tenant_slug"],
         )
 
+    def get_user_from_cookie(self, request: Request) -> Optional[CurrentUser]:
+        """Возвращает текущего пользователя исключительно по cookie-сессии (для веб-страниц кабинета)."""
+        token = request.cookies.get(COOKIE_NAME)
+        user = self.user_from_token(token)
+        if user:
+            return user
+
+        # Локальная разработка/тесты: без пароля пускаем только с самого сервера
+        if not (self.settings.dashboard_password or "").strip():
+            ip = self.client_ip(request)
+            if ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+                return CurrentUser(
+                    id=0,
+                    username=self.settings.dashboard_user or "admin",
+                    role=ROLE_PLATFORM_ADMIN,
+                    tenant_slug=None,
+                )
+        return None
+
     # === Зависимости FastAPI ===
     def current_user(self, request: Request) -> CurrentUser:
-        """Cookie-сессия, либо HTTP Basic (обратная совместимость для API и админа из .env)."""
+        """Cookie-сессия, либо HTTP Basic (для API-клиентов и интеграций)."""
         token = request.cookies.get(COOKIE_NAME)
         user = self.user_from_token(token)
         if user:
@@ -230,7 +279,6 @@ class AuthService:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Требуется вход в кабинет",
-            headers={"WWW-Authenticate": "Basic"},
         )
 
     def require_writer(self, request: Request) -> CurrentUser:

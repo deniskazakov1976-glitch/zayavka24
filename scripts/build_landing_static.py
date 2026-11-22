@@ -7,9 +7,9 @@ def build():
         raise FileNotFoundError(f"{src} does not exist")
     raw = src.read_text(encoding="utf-8")
     html = raw.replace("{{BOT_USERNAME}}", "Zayavka24AI_bot")
-    html = html.replace('href="/" target="_blank"', 'href="https://77.221.155.74.sslip.io/" target="_blank"')
+    html = html.replace('href="/landing"', 'href="#top"')
     html = html.replace('href="/login"', 'href="https://77.221.155.74.sslip.io/login"')
-    html = html.replace('href="/landing"', 'href="#"')
+    html = html.replace('href="/"', 'href="https://77.221.155.74.sslip.io/"')
 
     docs_dir = Path("docs")
     docs_dir.mkdir(exist_ok=True)

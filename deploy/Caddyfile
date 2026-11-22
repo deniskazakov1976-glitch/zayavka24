@@ -13,9 +13,22 @@
         reverse_proxy app:8080
     }
 
-    # All other routes (Dashboard & internal APIs) are blocked from the outside world
+    # Security: hide OpenAPI / Swagger docs from external public
+    handle /docs* {
+        respond 404
+    }
+
+    handle /openapi.json {
+        respond 404
+    }
+
+    handle /redoc* {
+        respond 404
+    }
+
+    # Dashboard, Login, APIs and Client Portal (protected by application session & auth)
     handle {
-        respond "Access denied" 403
+        reverse_proxy app:8080
     }
 
     log {

@@ -1658,7 +1658,15 @@
         if (me.is_platform_admin) roleEl.classList.add('owner');
 
         if (me.is_platform_admin) {
-          document.getElementById('tab-tenants-btn').style.display = '';
+          const tenantsBtn = document.getElementById('tab-tenants-btn');
+          if (tenantsBtn) tenantsBtn.style.display = '';
+          const usageBtn = document.getElementById('tab-usage-btn');
+          if (usageBtn) usageBtn.style.display = '';
+        } else {
+          const tenantsBtn = document.getElementById('tab-tenants-btn');
+          if (tenantsBtn) tenantsBtn.style.display = 'none';
+          const usageBtn = document.getElementById('tab-usage-btn');
+          if (usageBtn) usageBtn.style.display = 'none';
         }
 
         // Наблюдатель не может менять данные

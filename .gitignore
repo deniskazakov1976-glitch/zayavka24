@@ -38,3 +38,7 @@ reports/
 *.tmp
 Thumbs.db
 .DS_Store
+
+# === Сгенерированные видео-файлы и тяжелые медиа ===
+video_explainer/
+video_explainer_v2/

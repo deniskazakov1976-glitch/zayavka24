@@ -150,7 +150,8 @@ def test_login_wrong_password_and_rate_limit(env):
     assert resp.headers["location"].endswith("error=1")
 
     # Р вЂР ВµР В· cookie Р С”Р В°Р В±Р С‘Р Р…Р ВµРЎвЂљ Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…
-    assert client.get("/", follow_redirects=False).status_code == 401
+    assert client.get("/", follow_redirects=False).status_code in (302, 303)
+    assert client.get("/api/me").status_code == 401
 
 
 def test_login_logout_flow(env):
