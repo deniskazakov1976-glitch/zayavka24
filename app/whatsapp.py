@@ -62,6 +62,7 @@ class WhatsAppWebhookHandler:
         notifier: LeadNotifier,
         manual_pause_hours: int = 24,
         client: Optional[httpx.AsyncClient] = None,
+        quota_service: Optional[Any] = None,
     ) -> None:
         self.company_store = company_store
         self.storage = storage
@@ -69,6 +70,7 @@ class WhatsAppWebhookHandler:
         self.notifier = notifier
         self.manual_pause_hours = manual_pause_hours
         self._http_client = client
+        self.quota_service = quota_service
 
     def _resolve_company(self, slug_or_instance: str) -> Optional[CompanyProfile]:
         # 1. Direct lookup by slug
@@ -81,16 +83,16 @@ class WhatsAppWebhookHandler:
                 return c
         return None
 
-    async def handle_webhook(self, payload: Dict[str, Any], company_slug_hint: str = "") -> Dict[str, Any]:
+    async def handle_webhook(
+        self,
+        payload: Dict[str, Any],
+        company_slug_hint: str = "",
+        secret: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Dispatches an incoming Green-API webhook event."""
         type_webhook = payload.get("typeWebhook")
         if not type_webhook:
             return {"status": "ignored", "reason": "no_typeWebhook"}
-
-        # 1. Dedup event
-        event_id = str(payload.get("idMessage") or payload.get("timestamp") or "")
-        if event_id and self.storage.is_event_processed("whatsapp", event_id):
-            return {"status": "ignored", "reason": "duplicate_event"}
 
         # Resolve company
         instance_data = payload.get("instanceData") or {}
@@ -100,6 +102,16 @@ class WhatsAppWebhookHandler:
         if not company:
             logger.warning("WhatsApp webhook: no active company found for %s / %s", company_slug_hint, instance_id)
             return {"status": "error", "reason": "no_company_found"}
+
+        expected_secret = getattr(company, "whatsapp_webhook_secret", None)
+        if expected_secret:
+            if not secret or not secrets.compare_digest(secret, expected_secret):
+                return {"status": "error", "reason": "invalid_webhook_secret"}
+
+        # 1. Dedup event
+        event_id = str(payload.get("idMessage") or payload.get("timestamp") or "")
+        if event_id and self.storage.is_event_processed("whatsapp", event_id):
+            return {"status": "ignored", "reason": "duplicate_event"}
 
         sender_data = payload.get("senderData") or {}
         chat_id = sender_data.get("chatId") or ""
@@ -176,23 +188,37 @@ class WhatsAppWebhookHandler:
         self.storage.add_message("whatsapp", chat_id, "user", incoming_text)
         history_msgs = self.storage.get_history("whatsapp", chat_id, limit=12)
 
-        # Generate LLM response
+        # Quota check
+        if self.quota_service:
+            t_slug = getattr(company, "tenant_slug", None) or "default"
+            q_status = self.quota_service.check(t_slug)
+            if not q_status.allowed:
+                logger.warning("Quota exceeded for tenant '%s' in WhatsApp chat %s", t_slug, chat_id)
+                fallback = "Передал ваш запрос менеджеру, он свяжется с вами."
+                await wa_client.send_message(chat_id, fallback)
+                self.storage.add_message("whatsapp", chat_id, "assistant", fallback)
+                if event_id:
+                    self.storage.mark_event_processed("whatsapp", event_id, "quota_blocked")
+                return {"status": "quota_blocked"}
+
+        # Generate LLM response with proper channel attribution
         llm_reply = await self.llm.generate_reply(
             company=company,
             history=history_msgs,
             user_message=incoming_text,
+            channel="whatsapp",
+            chat_id=chat_id,
+            tenant_slug=getattr(company, "tenant_slug", None),
         )
 
-        # Apply guardrails
-        guard = validate_reply(llm_reply.text, company, mode="enforce")
-        final_text = guard.text
+        final_text = llm_reply.text
 
         # Send reply
         await wa_client.send_message(chat_id, final_text)
         self.storage.record_bot_sent_message("whatsapp", chat_id, text=final_text)
         self.storage.add_message("whatsapp", chat_id, "assistant", final_text)
 
-        # 6. Lead Capture
+        # 6. Lead Capture with deduplication check
         if llm_reply.lead:
             lead = llm_reply.lead
             lead.channel = "whatsapp"
@@ -205,9 +231,10 @@ class WhatsAppWebhookHandler:
                 clean_p = sender_phone.replace("@c.us", "")
                 if clean_p.startswith("7") or clean_p.startswith("8"):
                     lead.phone = f"+{clean_p}"
-            # Record in storage & notify Telegram + CRM
-            self.storage.save_lead(lead)
-            await self.notifier.notify(lead, company)
+            # Record in storage & notify Telegram + CRM only if new
+            if lead.phone and not self.storage.has_lead("whatsapp", chat_id, lead.phone):
+                self.storage.save_lead(lead)
+                await self.notifier.notify(lead, company)
 
         if event_id:
             self.storage.mark_event_processed("whatsapp", event_id, "replied")

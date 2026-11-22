@@ -410,6 +410,7 @@ def build_dashboard_router(
         storage.resolve_knowledge_gap(gap_id, status="ignored")
         return {"status": "ok"}
 
+    @router.post("/api/sessions/{channel}/{chat_id}/pause")
     @router.post("/api/sessions/{channel}/{chat_id}/toggle-pause")
     async def api_toggle_pause(
         channel: str, chat_id: str, user: CurrentUser = Depends(require_writer)
@@ -707,9 +708,12 @@ def build_dashboard_router(
     ) -> Dict[str, Any]:
         if slug == "default":
             raise HTTPException(status_code=400, detail="Клиента по умолчанию удалить нельзя")
-        if bot_manager:
-            await bot_manager.restart(slug)
         deleted = storage.delete_tenant(slug)
+        if bot_manager:
+            if hasattr(bot_manager, "stop_tenant"):
+                await bot_manager.stop_tenant(slug)
+            else:
+                await bot_manager.restart(slug)
         return {"status": "ok", "deleted": deleted}
 
     # === Пользователи кабинета ===
@@ -735,8 +739,6 @@ def build_dashboard_router(
     ) -> Dict[str, Any]:
         if payload.role not in (ROLE_CLIENT_ADMIN, ROLE_CLIENT_VIEWER):
             raise HTTPException(status_code=400, detail="Недопустимая роль")
-        if payload.role == ROLE_CLIENT_VIEWER and False:
-            pass
 
         if user.is_platform_admin:
             tenant_slug = payload.tenant_slug
@@ -990,11 +992,14 @@ def build_dashboard_router(
     @router.post("/api/simulator/chat")
     async def api_simulator_chat(req: SimulatorChatRequest, request: Request) -> Dict[str, Any]:
         # 1. Защита от спама и перерасхода токенов: лимит 30 сообщений в минуту на 1 IP
-        client_ip = (
-            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-            or request.headers.get("x-real-ip", "").strip()
-            or (request.client.host if request.client else "unknown")
-        )
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            client_ip = real_ip.strip()
+        else:
+            forwarded = request.headers.get("x-forwarded-for", "")
+            parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+            client_ip = parts[-1] if parts else (request.client.host if request.client else "unknown")
+
         now = time.time()
         timestamps = _sim_rate_limits.setdefault(client_ip, [])
         _sim_rate_limits[client_ip] = [t for t in timestamps if now - t < 60]
@@ -1009,10 +1014,11 @@ def build_dashboard_router(
         phone_match = re.search(r"(?:\+?7|8)[\s\-\(\)]*\d{3}[\s\-\(\)]*\d{3}[\s\-]*\d{2}[\s\-]*\d{2}", req.message)
         extracted_phone = phone_match.group(0).strip() if phone_match else None
 
-        # 3. Выбор профиля компании (по умолчанию студия Детейлинг Премиум)
+        # 3. Выбор профиля компании: строго разрешенные публичные демо-профили во избежание утечки прайсов клиентов
+        ALLOWED_SIMULATOR_SLUGS = {"detailing_premium", "demo_detailing", "demo_bodyshop"}
+        target_slug = req.company_slug if req.company_slug in ALLOWED_SIMULATOR_SLUGS else "detailing_premium"
         target_company = (
-            company_store.get(req.company_slug)
-            or company_store.get("detailing_premium")
+            company_store.get(target_slug)
             or company_store.get("demo_detailing")
             or company_store.get("demo_bodyshop")
         )
@@ -1036,12 +1042,12 @@ def build_dashboard_router(
                 "phone": None,
             }
 
-        # 4. Формирование истории диалога
+        # 4. Формирование истории диалога с ограничением длины каждого сообщения
         from app.models import ConversationMessage
         history_msgs: List[ConversationMessage] = []
         for item in req.history[-10:]:
             role = item.get("role")
-            content = item.get("content", "")
+            content = str(item.get("content", ""))[:1000]
             if role in ("user", "assistant") and content:
                 history_msgs.append(ConversationMessage(role=role, content=content))
 
@@ -1083,11 +1089,13 @@ def build_dashboard_router(
 
     @router.post("/api/landing/lead")
     async def api_landing_lead(req: LandingLeadRequest, request: Request) -> Dict[str, Any]:
-        client_ip = (
-            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-            or request.headers.get("x-real-ip", "").strip()
-            or (request.client.host if request.client else "unknown")
-        )
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            client_ip = real_ip.strip()
+        else:
+            forwarded = request.headers.get("x-forwarded-for", "")
+            parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+            client_ip = parts[-1] if parts else (request.client.host if request.client else "unknown")
         # Rate limit: max 5 form submissions per minute per IP
         now = time.time()
         timestamps = _sim_rate_limits.setdefault(f"lead_{client_ip}", [])

@@ -192,7 +192,9 @@ class AvitoWebhookHandler:
                 return {"status": "ignored", "reason": "paused"}
 
             company_slug = (
-                self.storage.get_session_company("avito", chat_id) or self.default_company_slug
+                payload.get("_company_slug")
+                or self.storage.get_session_company("avito", chat_id)
+                or self.default_company_slug
             )
             company = self.company_store.get_or_default(company_slug, self.default_company_slug)
             if not company:
@@ -200,6 +202,28 @@ class AvitoWebhookHandler:
                 return {"status": "error", "reason": "no_company_profile"}
 
             self.storage.upsert_session("avito", chat_id, company.slug)
+
+            # Quota check (Block B: TZ B3) — проверяем ДО вызова генерации для текста и медиа
+            if self.quota_service:
+                t_slug = getattr(company, "tenant_slug", None) or "default"
+                q_status = self.quota_service.check(t_slug)
+                if not q_status.allowed:
+                    logger.warning("Quota exceeded for tenant '%s' in Avito chat %s: %s", t_slug, chat_id, q_status.reason)
+                    fallback_reply = "Передал ваш запрос менеджеру, он свяжется с вами."
+                    self.storage.add_message("avito", chat_id, "user", text or f"[{msg_type}]")
+                    self.storage.add_message("avito", chat_id, "assistant", fallback_reply)
+                    self.storage.record_guard_event(
+                        channel="avito",
+                        chat_id=chat_id,
+                        company_slug=company.slug,
+                        event_type="quota_block",
+                        detail=q_status.reason or "Лимит сообщений тарифа исчерпан",
+                    )
+                    await self.avito_client.send_message(chat_id, fallback_reply)
+                    if message_id:
+                        self.storage.mark_event_processed("avito", message_id, status="done")
+                    return {"status": "quota_exceeded"}
+
             if is_media:
                 has_phone = self.storage.has_lead_for_chat("avito", chat_id)
                 img_url = None
@@ -208,7 +232,11 @@ class AvitoWebhookHandler:
                     if isinstance(img_data, dict):
                         sizes = img_data.get("sizes", {})
                         if isinstance(sizes, dict):
-                            sorted_keys = sorted(sizes.keys(), reverse=True)
+                            sorted_keys = sorted(
+                                sizes.keys(),
+                                key=lambda s: int(s.split("x")[0]) if "x" in s and s.split("x")[0].isdigit() else 0,
+                                reverse=True,
+                            )
                             if sorted_keys:
                                 img_url = sizes[sorted_keys[0]]
 

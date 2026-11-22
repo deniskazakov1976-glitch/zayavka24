@@ -2409,11 +2409,9 @@
           throw new Error('HTTP ' + resp.status);
         }
       } catch (err) {
-        console.warn('Lead fallback:', err);
-        statusBox.style.color = 'var(--primary)';
-        statusBox.innerText = '✓ Спасибо! Заявка принята. Мы перезвоним вам в течение 10 минут.';
-        phoneInput.value = '';
-        nameInput.value = '';
+        console.warn('Lead submission error:', err);
+        statusBox.style.color = '#f87171';
+        statusBox.innerHTML = '⚠️ Не удалось отправить форму. Напишите нам напрямую в <a href="https://t.me/dkazak1999" target="_blank" style="color:#38bdf8; text-decoration:underline;">Telegram @dkazak1999</a> или позвоните: +7 (903) 790-28-56';
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'Подключить за 10 мин';

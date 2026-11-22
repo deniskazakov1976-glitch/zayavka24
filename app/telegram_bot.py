@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 import time
 from collections import defaultdict, deque
@@ -293,8 +294,8 @@ def build_telegram_router(
                 storage.add_message("telegram", chat_id, "user", user_q)
                 storage.add_message("telegram", chat_id, "assistant", reply.text)
                 await callback.message.answer(
-                    f"<i>Вы (как клиент):</i> {user_q}\n\n"
-                    f"🤖 <b>Бот-ассистент:</b>\n{reply.text}",
+                    f"<i>Вы (как клиент):</i> {html.escape(user_q)}\n\n"
+                    f"🤖 <b>Бот-ассистент:</b>\n{html.escape(reply.text)}",
                     parse_mode="HTML",
                     reply_markup=_after_query_keyboard(),
                 )
@@ -404,6 +405,9 @@ def build_telegram_router(
     async def cmd_reload(message: Message) -> None:
         if not is_admin(message):
             return
+        if tenant_slug and tenant_slug != "default":
+            await message.answer("⛔ Команда /reload доступна только владельцу платформы.")
+            return
         count = company_store.reload()
         await message.answer(f"Профили перезагружены. Загружено компаний: {count}.")
 
@@ -411,17 +415,28 @@ def build_telegram_router(
     async def cmd_leads(message: Message) -> None:
         if not is_admin(message):
             return
-        leads = storage.list_recent_leads(limit=10)
+        scoped_slugs = None
+        if tenant_slug and tenant_slug != "default":
+            scoped_slugs = [p.slug for p in company_store.list_for_tenant(tenant_slug)]
+            if not scoped_slugs:
+                await message.answer("У вашего аккаунта пока нет привязанных компаний.")
+                return
+
+        leads = storage.list_recent_leads(limit=10, company_slugs=scoped_slugs)
         if not leads:
             await message.answer("Заявок пока нет.")
             return
         lines = ["<b>Последние 10 заявок:</b>\n"]
         for lead in leads:
-            src = "Авито" if lead.channel == "avito" else "TG"
+            src = "Авито" if lead.channel == "avito" else ("WhatsApp" if lead.channel == "whatsapp" else "TG")
+            safe_slug = html.escape(lead.company_slug)
+            safe_phone = html.escape(lead.phone)
+            safe_name = html.escape(lead.client_name or "без имени")
+            safe_info = html.escape(lead.summary or lead.service_interest or "-")
             lines.append(
-                f"• [{src}] <b>{lead.company_slug}</b> — <code>{lead.phone}</code> "
-                f"({lead.client_name or 'без имени'})\n"
-                f"  {lead.summary or lead.service_interest or '-'}"
+                f"• [{src}] <b>{safe_slug}</b> — <code>{safe_phone}</code> "
+                f"({safe_name})\n"
+                f"  {safe_info}"
             )
         await message.answer("\n".join(lines), parse_mode="HTML")
 
@@ -434,6 +449,12 @@ def build_telegram_router(
             await message.answer("Использование: /pause <chat_id>")
             return
         channel = "avito" if not target.lstrip("-").isdigit() else "telegram"
+        if tenant_slug and tenant_slug != "default":
+            allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
+            session_comp = storage.get_session_company(channel, target)
+            if session_comp and session_comp not in allowed:
+                await message.answer("⛔ Доступ ограничен: данный диалог принадлежит другой компании.")
+                return
         storage.pause_session(channel, target, hours=settings.avito_manual_pause_hours)
         await message.answer(
             f"Бот поставлен на паузу для {channel}:{target} на {settings.avito_manual_pause_hours} ч."
@@ -448,6 +469,12 @@ def build_telegram_router(
             await message.answer("Использование: /resume <chat_id>")
             return
         channel = "avito" if not target.lstrip("-").isdigit() else "telegram"
+        if tenant_slug and tenant_slug != "default":
+            allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
+            session_comp = storage.get_session_company(channel, target)
+            if session_comp and session_comp not in allowed:
+                await message.answer("⛔ Доступ ограничен: данный диалог принадлежит другой компании.")
+                return
         storage.resume_session(channel, target)
         await message.answer(f"Бот снова активен для {channel}:{target}.")
 
@@ -456,6 +483,16 @@ def build_telegram_router(
         chat_id = str(message.chat.id)
         target = (command.args or "").strip()
         if target and is_admin(message):
+            if tenant_slug and tenant_slug != "default":
+                allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
+                session_comp = (
+                    storage.get_session_company("telegram", target)
+                    or storage.get_session_company("avito", target)
+                    or storage.get_session_company("whatsapp", target)
+                )
+                if session_comp and session_comp not in allowed:
+                    await message.answer("⛔ Доступ ограничен: данный субъект принадлежит другой компании.")
+                    return
             del_cnt = storage.delete_subject_data(target)
             await message.answer(f"152-ФЗ: Данные субъекта «{target}» удалены ({del_cnt} записей).")
         else:
@@ -752,7 +789,7 @@ def build_telegram_router(
 
         if is_demo_session or slug == "demo_detailing":
             await message.answer(
-                f"🤖 <b>Бот-ассистент:</b>\n{reply.text}",
+                f"🤖 <b>Бот-ассистент:</b>\n{html.escape(reply.text)}",
                 parse_mode="HTML",
                 reply_markup=_after_query_keyboard(),
             )

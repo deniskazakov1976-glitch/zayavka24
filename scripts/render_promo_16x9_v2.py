@@ -297,7 +297,7 @@ def draw_high_contrast_subtitle(draw: ImageDraw.ImageDraw, text: str):
     draw.rounded_rectangle(
         [cx - tw // 2 - px - 2, y - py - 2, cx + tw // 2 + px + 2, y + th + py + 2],
         radius=14,
-        fill=(16, 185, 129, 60)
+        fill=(12, 32, 24)
     )
     draw.rounded_rectangle(
         [cx - tw // 2 - px, y - py, cx + tw // 2 + px, y + th + py],
@@ -500,15 +500,17 @@ def render_sc4_demo(t: float, dur: float) -> Image.Image:
 
     # 2. AI calculates & replies (after 3.5s)
     if t >= 3.5:
-        ai_y = c1_y + 155
-        draw_rounded_card(d, [lx1 + 50, ai_y, lx2 - 30, ai_y + 210], fill=(16, 185, 129, 30), outline=PRIMARY_GREEN, width=2, radius=16)
+        offset_y = int(25 * (1.0 - ease_out_cubic(min(1.0, (t - 3.5) / 0.4))))
+        ai_y = c1_y + 155 + offset_y
+        draw_rounded_card(d, [lx1 + 50, ai_y, lx2 - 30, ai_y + 210], fill=(12, 32, 24), outline=PRIMARY_GREEN, width=2, radius=16)
         d.text((lx1 + 75, ai_y + 18), "ИИ Старший мастер:", font=FONT_TITLE_MD, fill=PRIMARY_GREEN)
         msg = "Добрый вечер! Полиуретан SunTek на Monjaro —\nот 48 000 ₽. Срок 1 день, гарантия 5 лет.\nЕсть окно в четверг в 10:00. Оставите номер для брони?"
         d.text((lx1 + 75, ai_y + 62), msg, font=FONT_BODY_SM, fill=TEXT_WHITE)
 
     # 3. Customer sends phone (after 7.5s)
     if t >= 7.5:
-        c2_y = c1_y + 395
+        offset_c2 = int(25 * (1.0 - ease_out_cubic(min(1.0, (t - 7.5) / 0.4))))
+        c2_y = c1_y + 395 + offset_c2
         draw_rounded_card(d, [lx1 + 30, c2_y, lx2 - 30, c2_y + 115], fill=(26, 38, 62), outline=PRIMARY_GREEN, width=2, radius=16)
         d.text((lx1 + 50, c2_y + 15), "Клиент:", font=FONT_TITLE_MD, fill=ACCENT_BLUE)
         d.text((lx1 + 50, c2_y + 60), "+7 916 555-32-11, Алексей. Запишите на 10:00", font=FONT_BODY, fill=PRIMARY_GREEN)

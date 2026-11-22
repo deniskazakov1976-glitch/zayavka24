@@ -125,8 +125,11 @@ def validate_reply(
     cleaned_reply_for_prices = re.sub(r"(\d)\s+(\d)", r"\1\2", cleaned_reply)
     for m in price_pattern.finditer(cleaned_reply_for_prices):
         match_str = m.group(1)
+        full_match = m.group(0).lower()
         try:
             num = int(match_str.replace(" ", ""))
+            if any(k in full_match for k in ("тыс", "к")):
+                num *= 1000
             if num > 100 and num not in allowed_numbers:
                 violations.append(f"Выдуманная цена: {m.group(0).strip()}")
             elif "%" in m.group(0) and num not in allowed_numbers:

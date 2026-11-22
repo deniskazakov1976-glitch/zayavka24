@@ -1,7 +1,7 @@
 import secrets
 from typing import Any, Callable, Dict, Optional
 
-from fastapi import APIRouter, FastAPI, HTTPException, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Request, Response
 from starlette.middleware.cors import CORSMiddleware
 
 from app.auth import AuthService
@@ -29,8 +29,8 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -58,15 +58,21 @@ def create_app(
 
         # Verify secret (K2, K6)
         valid = False
+        company_slug = None
         if settings.avito_webhook_secret and secrets.compare_digest(secret, settings.avito_webhook_secret):
             valid = True
+            company_slug = settings.avito_default_company_slug
         else:
             acc = storage.get_avito_account_by_secret(secret)
             if acc:
                 valid = True
+                company_slug = acc.get("company_slug")
 
         if not valid:
             raise HTTPException(status_code=404, detail="Not Found")
+
+        if company_slug:
+            payload["_company_slug"] = company_slug
 
         # K3: Immediate response + background queue
         try:
@@ -85,16 +91,18 @@ def create_app(
 
     # WO / P3: WhatsApp Webhook Routes (Green-API / Chat-App)
     @app.post("/webhook/whatsapp/{company_slug}")
-    async def whatsapp_webhook_by_company(company_slug: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def whatsapp_webhook_by_company(company_slug: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         if whatsapp_handler is None:
             raise HTTPException(status_code=503, detail="WhatsApp integration is disabled")
-        return await whatsapp_handler.handle_webhook(payload, company_slug_hint=company_slug)
+        wh_secret = request.headers.get("x-webhook-secret") or request.query_params.get("secret")
+        return await whatsapp_handler.handle_webhook(payload, company_slug_hint=company_slug, secret=wh_secret)
 
     @app.post("/webhook/whatsapp")
-    async def whatsapp_webhook_default(payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def whatsapp_webhook_default(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         if whatsapp_handler is None:
             raise HTTPException(status_code=503, detail="WhatsApp integration is disabled")
-        return await whatsapp_handler.handle_webhook(payload)
+        wh_secret = request.headers.get("x-webhook-secret") or request.query_params.get("secret")
+        return await whatsapp_handler.handle_webhook(payload, secret=wh_secret)
 
     if avito_handler is not None:
         @app.on_event("startup")

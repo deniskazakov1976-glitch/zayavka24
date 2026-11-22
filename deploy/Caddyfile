@@ -1,16 +1,22 @@
 {$DOMAIN} {
     # Public webhooks and healthcheck
     handle /webhook/* {
-        reverse_proxy app:8080
+        reverse_proxy app:8080 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     handle /health {
-        reverse_proxy app:8080
+        reverse_proxy app:8080 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     # Public client landing page
     handle /landing* {
-        reverse_proxy app:8080
+        reverse_proxy app:8080 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     # Security: hide OpenAPI / Swagger docs from external public
@@ -28,7 +34,9 @@
 
     # Dashboard, Login, APIs and Client Portal (protected by application session & auth)
     handle {
-        reverse_proxy app:8080
+        reverse_proxy app:8080 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     log {

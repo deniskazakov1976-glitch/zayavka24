@@ -1,3 +1,4 @@
+import asyncio
 import html
 import logging
 from typing import Optional
@@ -15,7 +16,12 @@ def _esc(value: str) -> str:
 
 
 def format_lead_message(lead: LeadInfo, company: Optional[CompanyProfile] = None) -> str:
-    source_label = "Авито" if lead.channel == "avito" else "Telegram (Демо)"
+    if lead.channel == "avito":
+        source_label = "Авито"
+    elif lead.channel == "whatsapp":
+        source_label = "WhatsApp"
+    else:
+        source_label = "Telegram"
     company_title = _esc(company.company_name if company else lead.company_slug)
 
     lines = [
@@ -52,13 +58,15 @@ class LeadNotifier:
         self.bot = bot
         self.default_chat_id = default_chat_id
         self.crm_dispatcher = crm_dispatcher or CRMDispatcher()
+        self._background_tasks: set[asyncio.Task] = set()
 
     async def notify(self, lead: LeadInfo, company: Optional[CompanyProfile] = None) -> bool:
         # 1. Asynchronously dispatch lead to external CRM if configured (amoCRM, Bitrix24, Webhook)
         if self.crm_dispatcher and company and company.crm_type and company.crm_type != "none":
             try:
-                import asyncio
-                asyncio.create_task(self.crm_dispatcher.dispatch(lead, company))
+                task = asyncio.create_task(self.crm_dispatcher.dispatch(lead, company))
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
             except Exception as crm_err:
                 logger.warning("Failed to schedule CRM dispatch: %s", crm_err)
 
@@ -117,7 +125,12 @@ class LeadNotifier:
         if not self.bot or self.default_chat_id is None:
             return False
         comp_name = company.company_name if company else gap.company_slug
-        src_label = "Авито" if gap.channel == "avito" else "Telegram"
+        if gap.channel == "avito":
+            src_label = "Авито"
+        elif gap.channel == "whatsapp":
+            src_label = "WhatsApp"
+        else:
+            src_label = "Telegram"
         text = (
             f"🧠 <b>Новый вопрос от клиента (нет в базе знаний)!</b>\n"
             f"<b>Компания:</b> {_esc(comp_name)}\n"

@@ -1233,6 +1233,11 @@
       });
     }
 
+    function copyInputSibling(btn) {
+      const inp = btn.parentElement ? btn.parentElement.querySelector('input') : null;
+      if (inp && inp.value) copyToClipboard(inp.value);
+    }
+
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1295,7 +1300,7 @@
               <td><span style="font-weight: 600;">${escapeHtml(l.company_slug)}</span></td>
               <td>
                 <a href="tel:${safePhoneUri}" style="color: #34d399; font-weight: 700; text-decoration: none;">${safePhoneText}</a>
-                <button onclick="copyToClipboard('${safePhoneUri}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Копировать">
+                <button data-copy="${safePhoneUri}" onclick="copyToClipboard(this.dataset.copy)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;margin-left:4px;" title="Копировать">
                   <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 </button>
               </td>
@@ -1359,7 +1364,7 @@
 
     async function togglePause(channel, chatId) {
       try {
-        const r = await fetch(`/api/sessions/${channel}/${chatId}/pause`, { method: 'POST' });
+        const r = await fetch(`/api/sessions/${encodeURIComponent(channel)}/${encodeURIComponent(chatId)}/toggle-pause`, { method: 'POST' });
         const d = await r.json();
         showToast(d.is_paused ? 'Чат поставлен на паузу на 24ч (ИИ не отвечает)' : 'ИИ возобновил работу в чате');
         loadSessions();
@@ -1398,7 +1403,7 @@
               ${c.demo_link ? `
               <div style="display:flex; align-items:center; gap:8px;">
                 <input type="text" value="${escapeHtml(c.demo_link)}" readonly style="font-size: 12px; padding: 6px 10px; width: 320px; background: rgba(0,0,0,0.25);">
-                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${escapeHtml(c.demo_link)}')">
+                <button class="btn btn-secondary btn-sm" onclick="copyInputSibling(this)">
                   <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   Копировать
                 </button>
@@ -1419,6 +1424,8 @@
       }
     }
 
+    window._gapQuestions = window._gapQuestions || {};
+
     async function loadGaps() {
       try {
         const r = await fetch('/api/gaps');
@@ -1428,7 +1435,9 @@
           tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Все вопросы клиентов закрыты! Пробелов в базе знаний нет.</td></tr>';
           return;
         }
+        window._gapQuestions = {};
         tbody.innerHTML = data.map(g => {
+          window._gapQuestions[g.id] = g.question || '';
           const isPending = g.status === 'pending';
           const statusBadge = isPending ? '<span class="status-badge badge-pending">Ожидает ответа</span>' : '<span class="status-badge badge-learned">Изучено</span>';
           return `
@@ -1439,7 +1448,7 @@
               <td>${statusBadge}</td>
               <td>
                 ${isPending ? `
-                  <button class="btn btn-primary btn-sm" onclick="promptLearnGap(${g.id}, '${escapeHtml(g.question)}')">
+                  <button class="btn btn-primary btn-sm" onclick="promptLearnGap(${g.id})">
                     Обучить бота
                   </button>
                 ` : `
@@ -1454,7 +1463,8 @@
       }
     }
 
-    async function promptLearnGap(gapId, question) {
+    async function promptLearnGap(gapId) {
+      const question = (window._gapQuestions && window._gapQuestions[gapId]) || '';
       const answer = prompt(`Как бот должен правильно отвечать на вопрос:\n«${question}»?`);
       if (!answer || !answer.trim()) return;
 
@@ -1657,17 +1667,10 @@
         roleEl.innerText = roleMap[me.role] || me.role;
         if (me.is_platform_admin) roleEl.classList.add('owner');
 
-        if (me.is_platform_admin) {
-          const tenantsBtn = document.getElementById('tab-tenants-btn');
-          if (tenantsBtn) tenantsBtn.style.display = '';
-          const usageBtn = document.getElementById('tab-usage-btn');
-          if (usageBtn) usageBtn.style.display = '';
-        } else {
-          const tenantsBtn = document.getElementById('tab-tenants-btn');
-          if (tenantsBtn) tenantsBtn.style.display = 'none';
-          const usageBtn = document.getElementById('tab-usage-btn');
-          if (usageBtn) usageBtn.style.display = 'none';
-        }
+        const tenantsBtn = document.getElementById('tab-tenants-btn');
+        if (tenantsBtn) tenantsBtn.style.display = me.is_platform_admin ? '' : 'none';
+        const usageBtn = document.getElementById('tab-usage-btn');
+        if (usageBtn) usageBtn.style.display = '';
 
         // Наблюдатель не может менять данные
         if (!me.can_write) {
@@ -1732,6 +1735,7 @@
         name: (fd.get('name') || '').trim(),
         brand_name: (fd.get('brand_name') || '').trim(),
         telegram_bot_token: (fd.get('telegram_bot_token') || '').trim(),
+        plan: (fd.get('plan') || 'basic').trim(),
         admin_username: (fd.get('admin_username') || '').trim() || null,
         admin_password: (fd.get('admin_password') || '') || null
       };

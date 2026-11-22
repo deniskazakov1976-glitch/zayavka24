@@ -132,6 +132,16 @@ async def run() -> None:
             alert_manager=alert_manager,
         )
 
+    from app.whatsapp import WhatsAppWebhookHandler
+    whatsapp_handler = WhatsAppWebhookHandler(
+        company_store=company_store,
+        storage=storage,
+        llm=llm,
+        notifier=notifier,
+        manual_pause_hours=settings.avito_manual_pause_hours,
+        quota_service=quota_service,
+    )
+
     if settings.dashboard_enabled or settings.avito_enabled:
         server_app = create_app(
             settings=settings,
@@ -142,6 +152,7 @@ async def run() -> None:
             auth=auth,
             bot_manager=bot_manager,
             llm=llm,
+            whatsapp_handler=whatsapp_handler,
         )
         config = uvicorn.Config(
             server_app,

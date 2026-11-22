@@ -135,9 +135,16 @@ class AuthService:
         self._failed.setdefault(client_ip, []).append(time.time())
 
     def client_ip(self, request: Request) -> str:
+        # 1. Приоритет проверенному заголовку от Caddy / реверс-прокси
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+        # 2. Если передан x-forwarded-for, берем ПОСЛЕДНИЙ IP в цепочке (добавленный надежным прокси)
         forwarded = request.headers.get("x-forwarded-for")
         if forwarded:
-            return forwarded.split(",")[0].strip()
+            parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+            if parts:
+                return parts[-1]
         return request.client.host if request.client else "unknown"
 
     def login(self, username: str, password: str, client_ip: str = "") -> Optional[str]:
@@ -218,10 +225,11 @@ class AuthService:
         if user:
             return user
 
-        # Локальная разработка/тесты: без пароля пускаем только с самого сервера
+        # Локальная разработка/тесты: без пароля пускаем только с физического loopback без внешнего прокси
         if not (self.settings.dashboard_password or "").strip():
-            ip = self.client_ip(request)
-            if ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+            raw_host = request.client.host if request.client else ""
+            has_proxy_header = bool(request.headers.get("x-real-ip") or request.headers.get("x-forwarded-for"))
+            if not has_proxy_header and raw_host in ("127.0.0.1", "::1", "localhost", "testclient"):
                 return CurrentUser(
                     id=0,
                     username=self.settings.dashboard_user or "admin",
@@ -265,10 +273,11 @@ class AuthService:
                     )
                 return CurrentUser(id=0, username=expected_user, role=ROLE_PLATFORM_ADMIN, tenant_slug=None)
 
-        # Локальная разработка: без пароля пускаем только с самого сервера
+        # Локальная разработка: без пароля пускаем только с физического loopback без внешнего прокси
         if not (self.settings.dashboard_password or "").strip():
-            ip = self.client_ip(request)
-            if ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+            raw_host = request.client.host if request.client else ""
+            has_proxy_header = bool(request.headers.get("x-real-ip") or request.headers.get("x-forwarded-for"))
+            if not has_proxy_header and raw_host in ("127.0.0.1", "::1", "localhost", "testclient"):
                 return CurrentUser(
                     id=0,
                     username=self.settings.dashboard_user or "admin",
