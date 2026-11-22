@@ -46,10 +46,21 @@ def _platform_menu_keyboard() -> InlineKeyboardMarkup:
 
 def _test_scenarios_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✍️ Написать свой вопрос", callback_data="demo:custom_q")],
         [InlineKeyboardButton(text="«Покраска бампера на Toyota Camry»", callback_data="demo:q1")],
         [InlineKeyboardButton(text="«Оклейка зон риска на Geely Monjaro»", callback_data="demo:q2")],
         [InlineKeyboardButton(text="«Работаете в воскресенье?»", callback_data="demo:q3")],
         [InlineKeyboardButton(text="«Сделайте скидку 50%!»", callback_data="demo:q4")],
+        [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
+    ])
+
+
+def _after_query_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✍️ Задать ещё вопрос", callback_data="demo:custom_q")],
+        [InlineKeyboardButton(text="🚗 Выбрать другой сценарий", callback_data="demo:test")],
+        [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
         [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
     ])
 
@@ -217,9 +228,35 @@ def build_telegram_router(
             await callback.message.answer(
                 "🚗 <b>Режим тестирования как клиент</b>\n\n"
                 "Представьте, что вы — автовладелец с Авито.\n"
-                "Нажмите один из частых вопросов ниже или напишите свой (можно каверзный):",
+                "Нажмите <b>«✍️ Написать свой вопрос»</b> (или отправьте любое сообщение в чат), "
+                "либо выберите один из частых готовых сценариев ниже:",
                 parse_mode="HTML",
                 reply_markup=_test_scenarios_keyboard(),
+            )
+            return
+
+        if action == "custom_q":
+            demo_company = resolve_company("demo_detailing") or resolve_company(None)
+            if demo_company:
+                storage.upsert_session("telegram", chat_id, demo_company.slug)
+                storage.resume_session("telegram", chat_id)
+            text = (
+                "✍️ <b>Задайте любой вопрос или смоделируйте ситуацию:</b>\n\n"
+                "Представьте, что вы — автовладелец, который пишет вам на Авито или в WhatsApp.\n\n"
+                "<b>Проверьте бота на прочность — напишите в чат:</b>\n"
+                "• Вопрос по цене: <i>«Сколько стоит полировка фар на BMW X5?»</i>\n"
+                "• Каверзный вопрос: <i>«А если краска облезет через месяц, переделаете бесплатно?»</i>\n"
+                "• Попытку сбить цену: <i>«В соседнем гараже красят за 3 000 ₽, сделайте дешевле!»</i>\n"
+                "• Или отправьте номер телефона: <i>«+7 999 123-45-67, перезвоните»</i> — и посмотрите, как сработает перехват лида!\n\n"
+                "👇 <b>Просто напишите ваш вопрос прямо сюда в чат:</b>"
+            )
+            await callback.message.answer(
+                text,
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚗 Выбрать готовый вопрос", callback_data="demo:test")],
+                    [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
+                ]),
             )
             return
 
@@ -259,7 +296,7 @@ def build_telegram_router(
                     f"<i>Вы (как клиент):</i> {user_q}\n\n"
                     f"🤖 <b>Бот-ассистент:</b>\n{reply.text}",
                     parse_mode="HTML",
-                    reply_markup=_test_scenarios_keyboard(),
+                    reply_markup=_after_query_keyboard(),
                 )
                 # ВАУ-эффект при перехвате лида
                 if reply.lead and not storage.has_lead("telegram", chat_id, reply.lead.phone):
@@ -269,7 +306,7 @@ def build_telegram_router(
                 logger.exception("Demo LLM error: %s", exc)
                 await callback.message.answer(
                     "Секунду, ИИ-мастер обрабатывает запрос. Попробуйте ещё раз.",
-                    reply_markup=_test_scenarios_keyboard(),
+                    reply_markup=_after_query_keyboard(),
                 )
             return
 
@@ -638,6 +675,7 @@ def build_telegram_router(
             return
 
         slug = storage.get_session_company("telegram", chat_id)
+        is_demo_session = (slug in (_PLATFORM_DEMO_SLUG, "demo_detailing") or not slug)
 
         # Если пользователь в demo-режиме и пишет текст (не кнопку) — переключаем на demo_detailing
         if slug == _PLATFORM_DEMO_SLUG or not slug:
@@ -711,7 +749,15 @@ def build_telegram_router(
 
         storage.add_message("telegram", chat_id, "user", text)
         storage.add_message("telegram", chat_id, "assistant", reply.text)
-        await message.answer(reply.text)
+
+        if is_demo_session or slug == "demo_detailing":
+            await message.answer(
+                f"🤖 <b>Бот-ассистент:</b>\n{reply.text}",
+                parse_mode="HTML",
+                reply_markup=_after_query_keyboard(),
+            )
+        else:
+            await message.answer(reply.text)
 
         if reply.lead and not storage.has_lead("telegram", chat_id, reply.lead.phone):
             storage.save_lead(reply.lead)

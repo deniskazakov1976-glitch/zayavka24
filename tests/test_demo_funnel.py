@@ -12,6 +12,7 @@ from app.storage import Storage
 from app.telegram_bot import (
     _platform_menu_keyboard,
     _test_scenarios_keyboard,
+    _after_query_keyboard,
     _trial_cta_keyboard,
     _contact_keyboard,
     build_telegram_router,
@@ -65,22 +66,31 @@ def test_platform_keyboards():
     assert any("Тарифы и окупаемость" in t for t in button_texts)
     assert any("Связаться с основателем" in t for t in button_texts)
 
-    # 2. Test scenarios keyboard has concrete auto queries
+    # 2. Test scenarios keyboard has concrete auto queries and custom query button
     scenarios = _test_scenarios_keyboard()
     scenario_texts = [btn.text for row in scenarios.inline_keyboard for btn in row]
+    assert any("Написать свой вопрос" in t for t in scenario_texts)
     assert any("Toyota Camry" in t for t in scenario_texts)
     assert any("Geely Monjaro" in t for t in scenario_texts)
     assert any("воскресенье" in t for t in scenario_texts)
     assert any("скидку 50%" in t for t in scenario_texts)
     assert any("Главное меню" in t for t in scenario_texts)
 
-    # 3. Trial CTA keyboard
+    # 3. After query keyboard gives seamless next action
+    after_q = _after_query_keyboard()
+    after_texts = [btn.text for row in after_q.inline_keyboard for btn in row]
+    assert any("Задать ещё вопрос" in t for t in after_texts)
+    assert any("Выбрать другой сценарий" in t for t in after_texts)
+    assert any("Запустить тест-драйв" in t for t in after_texts)
+    assert any("Главное меню" in t for t in after_texts)
+
+    # 4. Trial CTA keyboard
     trial = _trial_cta_keyboard()
     trial_texts = [btn.text for row in trial.inline_keyboard for btn in row]
     assert any("Запустить тест-драйв" in t for t in trial_texts)
     assert any("Главное меню" in t for t in trial_texts)
 
-    # 4. Contact keyboard has direct Telegram link to Denis
+    # 5. Contact keyboard has direct Telegram link to Denis
     contact = _contact_keyboard()
     contact_buttons = [btn for row in contact.inline_keyboard for btn in row]
     assert any(btn.url == "https://t.me/Zayavka24AI" for btn in contact_buttons if btn.url)
@@ -118,6 +128,7 @@ def _setup_test_router(tmp_path: Path, tenant_slug=None):
     mock_reply = MagicMock()
     mock_reply.text = "Локальная покраска бампера Camry от 8 000 руб."
     mock_reply.lead = None
+    mock_reply.knowledge_gap = None
     llm.generate_reply.return_value = mock_reply
 
     notifier = MagicMock()
@@ -250,6 +261,65 @@ async def test_demo_callbacks_menu_test_pricing_contact(tmp_path: Path):
     assert "Сколько стоит покрасить передний бампер на Toyota Camry?" in ans_q1
     assert "Бот-ассистент" in ans_q1
     assert ctx["llm"].generate_reply.called
+    q1_markup = cb_q1.message.answer.call_args[1].get("reply_markup")
+    assert any("Задать ещё вопрос" in btn.text for row in q1_markup.inline_keyboard for btn in row)
+
+    # 6. demo:custom_q (Ask own question prompt)
+    cb_custom = AsyncMock()
+    cb_custom.message.chat.id = 1001
+    cb_custom.data = "demo:custom_q"
+    await handle_demo_callback(cb_custom)
+    ans_custom = cb_custom.message.answer.call_args[0][0]
+    assert "Задайте любой вопрос или смоделируйте ситуацию" in ans_custom
+    assert "Проверьте бота на прочность" in ans_custom
+    custom_markup = cb_custom.message.answer.call_args[1].get("reply_markup")
+    assert any("Выбрать готовый вопрос" in btn.text for row in custom_markup.inline_keyboard for btn in row)
+
+
+@pytest.mark.asyncio
+async def test_custom_free_text_question_in_demo_mode(tmp_path: Path):
+    """Test user sending free-text custom question in demo mode gets LLM response with next actions."""
+    ctx = _setup_test_router(tmp_path)
+    cmd_start = ctx["msg_handlers"]["cmd_start"]
+    handle_text = ctx["msg_handlers"]["handle_text"]
+    mock_bot = AsyncMock()
+
+    chat_id = 70077
+
+    # Start in demo mode
+    msg_start = AsyncMock()
+    msg_start.chat.id = chat_id
+    msg_start.from_user.id = chat_id
+    msg_start.from_user.full_name = "Олег Авто"
+    command = CommandObject(command="start", args="demo")
+    await cmd_start(msg_start, command)
+
+    # User sends a custom arbitrary question
+    mock_reply = MagicMock()
+    mock_reply.text = "Полировка фар на BMW X5 стоит 4 500 ₽ за пару. Включает бронирование защитной плёнкой!"
+    mock_reply.lead = None
+    mock_reply.knowledge_gap = None
+    ctx["llm"].generate_reply.return_value = mock_reply
+
+    msg_q = AsyncMock()
+    msg_q.chat.id = chat_id
+    msg_q.text = "Сколько стоит полировка фар на BMW X5?"
+    msg_q.from_user.id = chat_id
+    msg_q.from_user.full_name = "Олег Авто"
+    await handle_text(msg_q, mock_bot)
+
+    # Verify response has assistant prefix and after_query_keyboard
+    ans_text = msg_q.answer.call_args[0][0]
+    assert "Бот-ассистент" in ans_text
+    assert "Полировка фар на BMW X5" in ans_text
+
+    markup = msg_q.answer.call_args[1].get("reply_markup")
+    assert markup is not None
+    button_texts = [btn.text for row in markup.inline_keyboard for btn in row]
+    assert any("Задать ещё вопрос" in t for t in button_texts)
+    assert any("Выбрать другой сценарий" in t for t in button_texts)
+    assert any("Запустить тест-драйв" in t for t in button_texts)
+    assert any("Главное меню" in t for t in button_texts)
 
 
 @pytest.mark.asyncio
