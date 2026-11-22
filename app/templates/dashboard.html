@@ -233,30 +233,43 @@
     /* Tabs Navigation */
     .tab-nav {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       background: var(--bg-surface);
-      padding: 6px;
+      padding: 4px;
       border-radius: var(--radius-md);
       border: 1px solid var(--card-border);
       margin-bottom: 24px;
       overflow-x: auto;
-      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+    .tab-nav::-webkit-scrollbar {
+      height: 4px;
+    }
+    .tab-nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .tab-nav::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
     }
     .tab-btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
+      gap: 6px;
+      padding: 7px 11px;
       background: transparent;
       border: none;
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 600;
       font-family: var(--font-main);
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all 0.15s ease;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .tab-btn:hover {
       color: var(--text-main);
@@ -271,10 +284,11 @@
     .tab-count {
       font-family: var(--font-mono);
       font-size: 11px;
-      padding: 2px 7px;
+      padding: 1px 6px;
       border-radius: 9999px;
       background: rgba(255, 255, 255, 0.08);
       color: var(--text-muted);
+      line-height: 1.2;
     }
     .tab-btn.active .tab-count {
       background: var(--primary);
@@ -626,50 +640,50 @@
 
     <!-- Navigation Tabs -->
     <div class="tab-nav">
-      <button class="tab-btn active" onclick="switchTab('leads')">
+      <button class="tab-btn active" onclick="switchTab('leads')" title="Зафиксированные заявки">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-        Лиды и заявки
+        Заявки
         <span class="tab-count" id="count-leads">0</span>
       </button>
 
-      <button class="tab-btn" onclick="switchTab('sessions')">
+      <button class="tab-btn" onclick="switchTab('sessions')" title="Активные диалоги клиентов">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Активные диалоги
+        Диалоги
         <span class="tab-count" id="count-sessions">0</span>
       </button>
 
-      <button class="tab-btn" onclick="switchTab('gaps')">
+      <button class="tab-btn" onclick="switchTab('gaps')" title="Вопросы вне базы знаний (самообучение бота)">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-        База самообучения
+        База знаний
         <span class="tab-count" id="count-gaps">0</span>
       </button>
 
-      <button class="tab-btn" onclick="switchTab('companies')">
+      <button class="tab-btn" onclick="switchTab('companies')" title="Профили компаний и демо-ссылки">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-        Компании и ссылки
+        Компании
       </button>
 
-      <button class="tab-btn" onclick="switchTab('create')">
+      <button class="tab-btn" onclick="switchTab('create')" title="Создать компанию под нового клиента">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Добавить компанию
+        + Компания
       </button>
 
-      <button class="tab-btn" onclick="switchTab('avito')">
+      <button class="tab-btn" onclick="switchTab('avito')" title="Подключение Авито Pro">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Авито Pro
       </button>
 
-      <button class="tab-btn" onclick="switchTab('guard')">
+      <button class="tab-btn" onclick="switchTab('guard')" title="Защита от выдуманных цен (Guardrails)">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Защита цен
       </button>
 
-      <button class="tab-btn" id="tab-usage-btn" onclick="switchTab('usage')">
+      <button class="tab-btn" id="tab-usage-btn" onclick="switchTab('usage')" title="Учёт токенов и расходов">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Расходы
       </button>
 
-      <button class="tab-btn" id="tab-tenants-btn" onclick="switchTab('tenants')" style="display:none">
+      <button class="tab-btn" id="tab-tenants-btn" onclick="switchTab('tenants')" style="display:none" title="Управление клиентами и Telegram-ботами">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Клиенты и боты
         <span class="tab-count" id="count-tenants">0</span>
@@ -1930,6 +1944,16 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      const tabNav = document.querySelector('.tab-nav');
+      if (tabNav) {
+        tabNav.addEventListener('wheel', (e) => {
+          if (e.deltaY !== 0) {
+            e.preventDefault();
+            tabNav.scrollLeft += e.deltaY;
+          }
+        }, { passive: false });
+      }
+
       await loadMe();
       loadAllData();
     });
