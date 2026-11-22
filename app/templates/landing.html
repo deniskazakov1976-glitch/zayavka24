@@ -2,7 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06080d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Заявка 24/7 — ИИ-менеджер продаж для Авито, WhatsApp и Telegram с выгрузкой в CRM</title>
   <meta name="description" content="Увеличьте конверсию в заявку на 38%. ИИ-менеджер отвечает за 15 секунд в Авито, WhatsApp и Telegram, квалифицирует клиентов по фото авто и мгновенно создает лиды в amoCRM, Битрикс24 или Telegram мастера.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +43,7 @@
 
     html {
       scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -48,8 +52,15 @@
       color: var(--text);
       line-height: 1.6;
       overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+    }
+
+    button, a, input, [role="button"], .prompt-chip, .faq-item {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     h1, h2, h3, h4 {
@@ -605,10 +616,29 @@
     }
     input[type=range] {
       width: 100%;
-      height: 6px;
+      height: 8px;
       background: var(--surface-elevated);
       border-radius: var(--radius-full);
       accent-color: var(--primary);
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      box-shadow: 0 0 10px var(--primary-glow);
       cursor: pointer;
     }
     .calc-result-box {
@@ -902,6 +932,11 @@
     }
     .footer-links a:hover { color: var(--text-muted); }
 
+    /* Mobile Sticky Action Bar */
+    .mobile-sticky-bar {
+      display: none;
+    }
+
     @media (max-width: 900px) {
       .proof-bar { grid-template-columns: repeat(2, 1fr); }
       .sim-wrap { grid-template-columns: 1fr; }
@@ -912,10 +947,375 @@
       .steps-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
     }
-    @media (max-width: 600px) {
-      .proof-bar { grid-template-columns: 1fr; }
-      .calc-card { padding: 24px; }
-      .sim-wrap { padding: 20px; }
+
+    @media (max-width: 768px) {
+      .mobile-sticky-bar {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: rgba(12, 16, 23, 0.94);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(0, 229, 153, 0.25);
+        box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.55);
+        transform: translateY(115%);
+        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .mobile-sticky-bar.visible {
+        transform: translateY(0);
+      }
+      .mobile-sticky-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      .mobile-sticky-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .mst-title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .mst-sub {
+        font-size: 11px;
+        color: var(--primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .mobile-sticky-btn {
+        padding: 9px 18px !important;
+        font-size: 13px !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        padding: 0 16px;
+      }
+      .nav-holder {
+        top: 10px;
+        padding: 0 10px;
+      }
+      .island-nav {
+        width: 100%;
+        justify-content: space-between;
+        padding: 6px 12px 6px 10px;
+        gap: 8px;
+      }
+      .nav-logo {
+        font-size: 15px;
+        gap: 8px;
+      }
+      .logo-badge {
+        width: 28px;
+        height: 28px;
+      }
+      .island-nav .btn {
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+
+      .hero {
+        padding: 42px 0 32px;
+      }
+      .hero-glow {
+        width: 100%;
+        height: 240px;
+        filter: blur(50px);
+      }
+      .hero-tag {
+        font-size: 11.5px;
+        padding: 6px 12px;
+        margin-bottom: 20px;
+        max-width: 100%;
+        text-align: center;
+        line-height: 1.4;
+      }
+      .hero h1 {
+        font-size: clamp(23px, 6.8vw, 36px);
+        line-height: 1.2;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+      }
+      .hero p {
+        font-size: 15px;
+        line-height: 1.55;
+        margin-bottom: 28px;
+      }
+      .hero-ctas {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+        margin-bottom: 36px;
+      }
+      .hero-ctas .btn {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+      }
+
+      .proof-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 16px 14px;
+        margin-bottom: 48px;
+        border-radius: var(--radius-sm);
+      }
+      .proof-num {
+        font-size: 22px;
+      }
+      .proof-num span {
+        font-size: 15px;
+      }
+      .proof-text {
+        font-size: 11.5px;
+        line-height: 1.35;
+      }
+
+      .tagline-section {
+        padding: 44px 0;
+        margin-bottom: 48px;
+      }
+      .tagline-text {
+        font-size: clamp(19px, 5.5vw, 26px);
+        line-height: 1.35;
+      }
+
+      #simulator {
+        padding-top: 10px !important;
+      }
+      .section-title {
+        font-size: clamp(22px, 6vw, 32px);
+        margin-bottom: 10px;
+      }
+      .section-sub {
+        font-size: 14px;
+        margin-bottom: 30px;
+        line-height: 1.5;
+      }
+      .sim-wrap {
+        padding: 16px 12px;
+        margin-bottom: 48px;
+        border-radius: var(--radius-md);
+        gap: 20px;
+      }
+      .sim-info h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+      }
+      .sim-info p {
+        font-size: 13.5px;
+        margin-bottom: 16px;
+      }
+      .quick-prompts {
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .prompt-chip {
+        padding: 10px 14px;
+        font-size: 13px;
+        border-radius: var(--radius-sm);
+      }
+      .messenger-box {
+        height: 420px;
+        border-radius: var(--radius-sm);
+      }
+      .messenger-top {
+        padding: 10px 12px;
+      }
+      .m-avatar {
+        width: 32px;
+        height: 32px;
+      }
+      .m-status {
+        font-size: 11px;
+      }
+      .chat-messages {
+        padding: 14px 12px;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .msg {
+        max-width: 90%;
+        padding: 10px 12px;
+        border-radius: 12px;
+      }
+      .typing-box {
+        gap: 8px;
+      }
+      .typing-status-text {
+        font-size: 0.76rem;
+        line-height: 1.3;
+      }
+      .messenger-input {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      /* Prevent iOS Safari automatic zoom on focus */
+      .messenger-input input {
+        font-size: 16px;
+        padding: 10px 12px;
+      }
+      .messenger-input button {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .calc-card {
+        padding: 20px 14px;
+        margin-bottom: 48px;
+        border-radius: var(--radius-md);
+      }
+      .calc-grid {
+        gap: 28px;
+      }
+      .slider-header {
+        font-size: 13.5px;
+      }
+      .slider-val {
+        font-size: 17px;
+      }
+      .calc-result-box {
+        padding: 24px 16px;
+        border-radius: var(--radius-sm);
+      }
+      .calc-res-label {
+        font-size: 11.5px;
+      }
+      .calc-res-num {
+        font-size: clamp(30px, 9vw, 42px);
+      }
+      .calc-res-sub {
+        font-size: 13px;
+      }
+
+      .channels-bento {
+        gap: 16px;
+        margin-bottom: 48px;
+      }
+      .channel-card {
+        padding: 20px 16px;
+        border-radius: var(--radius-md);
+      }
+      .channel-card h3 {
+        font-size: 18px;
+      }
+      .channel-card p {
+        font-size: 13.5px;
+        margin-bottom: 14px;
+      }
+      .channel-pill {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .sync-flow {
+        padding: 16px 14px;
+        border-radius: var(--radius-sm);
+      }
+      .sync-stage-title {
+        font-size: 11px;
+      }
+      .sync-stage-val {
+        font-size: 13px;
+      }
+
+      .steps-grid {
+        gap: 16px;
+        margin-bottom: 48px;
+      }
+      .step-card {
+        padding: 22px 18px;
+        border-radius: var(--radius-md);
+      }
+      .step-badge {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+        margin-bottom: 16px;
+      }
+      .step-card h4 {
+        font-size: 18px;
+      }
+      .step-card p {
+        font-size: 13.5px;
+      }
+
+      .faq-list {
+        margin-bottom: 48px;
+        gap: 10px;
+      }
+      .faq-item {
+        padding: 16px 18px;
+        border-radius: var(--radius-sm);
+      }
+      .faq-q {
+        font-size: 14.5px;
+        line-height: 1.4;
+      }
+      .faq-a {
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .final-cta {
+        padding: 40px 16px;
+        margin-bottom: 48px;
+        border-radius: var(--radius-md);
+      }
+      .final-cta h2 {
+        font-size: clamp(23px, 6.5vw, 34px);
+        line-height: 1.25;
+      }
+      .final-cta p {
+        font-size: 14.5px;
+        margin-bottom: 24px;
+      }
+      .final-cta .btn {
+        width: 100%;
+        white-space: normal;
+        padding: 14px 18px;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      footer {
+        padding: 28px 0 calc(28px + 64px);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .wrap {
+        padding: 0 12px;
+      }
+      .hero h1 {
+        font-size: 22px;
+      }
+      .proof-bar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .nav-logo span {
+        font-size: 14px;
+      }
+      .island-nav .btn {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
     }
   </style>
 </head>
@@ -1490,6 +1890,15 @@
         </div>`;
       chat.scrollTop = chat.scrollHeight;
 
+      if (window.innerWidth <= 900) {
+        const messenger = document.querySelector('.messenger-box');
+        if (messenger) {
+          setTimeout(() => {
+            messenger.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+        }
+      }
+
       requestSimulatorReply(text, typingId);
     }
 
@@ -1524,6 +1933,31 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
+
+    // Mobile Sticky Action Bar Visibility on Scroll
+    window.addEventListener('scroll', () => {
+      const bar = document.getElementById('mobile-sticky-bar');
+      if (!bar) return;
+      if (window.scrollY > 320) {
+        bar.classList.add('visible');
+      } else {
+        bar.classList.remove('visible');
+      }
+    }, { passive: true });
   </script>
+
+  <!-- Mobile Sticky Action Bar -->
+  <div class="mobile-sticky-bar" id="mobile-sticky-bar">
+    <div class="mobile-sticky-content">
+      <div class="mobile-sticky-text">
+        <div class="mst-title">Тест-драйв на 3 дня</div>
+        <div class="mst-sub">Бесплатно без обязательств</div>
+      </div>
+      <a href="https://t.me/{{BOT_USERNAME}}?start=demo" target="_blank" class="btn btn-primary mobile-sticky-btn">
+        <span>Запустить в TG</span>
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    </div>
+  </div>
 </body>
 </html>
