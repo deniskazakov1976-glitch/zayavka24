@@ -93,7 +93,7 @@ def test_platform_keyboards():
     # 5. Contact keyboard has direct Telegram link to Denis
     contact = _contact_keyboard()
     contact_buttons = [btn for row in contact.inline_keyboard for btn in row]
-    assert any(btn.url == "https://t.me/Zayavka24AI" for btn in contact_buttons if btn.url)
+    assert any(btn.url == "https://t.me/dkazak1999" for btn in contact_buttons if btn.url)
     assert any("Запустить тест-драйв" in btn.text for btn in contact_buttons)
     assert any("Главное меню" in btn.text for btn in contact_buttons)
 
@@ -248,9 +248,9 @@ async def test_demo_callbacks_menu_test_pricing_contact(tmp_path: Path):
     await handle_demo_callback(cb_contact)
     ans_contact = cb_contact.message.answer.call_args[0][0]
     assert "Денис, основатель платформы" in ans_contact
-    assert "@Zayavka24AI" in ans_contact
+    assert "@dkazak1999" in ans_contact
     contact_markup = cb_contact.message.answer.call_args[1].get("reply_markup")
-    assert any(btn.url == "https://t.me/Zayavka24AI" for row in contact_markup.inline_keyboard for btn in row)
+    assert any(btn.url == "https://t.me/dkazak1999" for row in contact_markup.inline_keyboard for btn in row)
 
     # 5. demo:q1 (Camry bumper query)
     cb_q1 = AsyncMock()

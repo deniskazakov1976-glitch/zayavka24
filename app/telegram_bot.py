@@ -74,7 +74,7 @@ def _trial_cta_keyboard() -> InlineKeyboardMarkup:
 
 def _contact_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💬 Написать Денису в Telegram", url="https://t.me/Zayavka24AI")],
+        [InlineKeyboardButton(text="💬 Написать Денису в Telegram", url="https://t.me/dkazak1999")],
         [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
         [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
     ])
@@ -328,7 +328,7 @@ def build_telegram_router(
             text = (
                 "📞 <b>Связаться с основателем</b>\n\n"
                 "Денис, основатель платформы «Заявка 24/7»\n"
-                "Telegram: @Zayavka24AI\n\n"
+                "Telegram: @dkazak1999\n\n"
                 "Настраиваем бота под ваш прайс за 10 минут.\n"
                 "Первые 3 дня — бесплатно, без обязательств."
             )
