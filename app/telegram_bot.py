@@ -46,7 +46,7 @@ def _platform_menu_keyboard() -> InlineKeyboardMarkup:
 
 def _test_scenarios_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="«Покрась бампер на Toyota Camry»", callback_data="demo:q1")],
+        [InlineKeyboardButton(text="«Покраска бампера на Toyota Camry»", callback_data="demo:q1")],
         [InlineKeyboardButton(text="«Оклейка зон риска на Geely Monjaro»", callback_data="demo:q2")],
         [InlineKeyboardButton(text="«Работаете в воскресенье?»", callback_data="demo:q3")],
         [InlineKeyboardButton(text="«Сделайте скидку 50%!»", callback_data="demo:q4")],
@@ -56,6 +56,14 @@ def _test_scenarios_keyboard() -> InlineKeyboardMarkup:
 
 def _trial_cta_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
+    ])
+
+
+def _contact_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Написать Денису в Telegram", url="https://t.me/Zayavka24AI")],
         [InlineKeyboardButton(text="🚀 Запустить тест-драйв на 3 дня", callback_data="demo:trial")],
         [InlineKeyboardButton(text="🔙 Главное меню", callback_data="demo:menu")],
     ])
@@ -94,9 +102,10 @@ def build_telegram_router(
     admin_ids: Optional[list] = None,
     quota_service: Optional[Any] = None,
     alert_manager: Optional[Any] = None,
+    rate_limiter: Optional[RateLimiter] = None,
 ) -> Router:
     router = Router()
-    rate_limiter = RateLimiter()
+    rate_limiter = rate_limiter or RateLimiter()
     effective_admins = set(admin_ids if admin_ids is not None else settings.admin_ids)
 
     def is_admin(message: Message) -> bool:
@@ -132,9 +141,10 @@ def build_telegram_router(
     async def cmd_start(message: Message, command: CommandObject) -> None:
         chat_id = str(message.chat.id)
         raw_arg = (command.args or "").strip()
+        is_platform = (tenant_slug is None or tenant_slug == "default")
 
-        # --- Вход с лендинга в режим демо-платформы ---
-        if raw_arg == _PLATFORM_DEMO_SLUG:
+        # --- Вход с лендинга в режим демо-платформы или bare /start на платформенном боте ---
+        if raw_arg == _PLATFORM_DEMO_SLUG or (is_platform and not raw_arg):
             storage.upsert_session("telegram", chat_id, _PLATFORM_DEMO_SLUG)
             storage.clear_history("telegram", chat_id)
             _saas_wizard.pop(chat_id, None)
@@ -285,7 +295,7 @@ def build_telegram_router(
                 "Настраиваем бота под ваш прайс за 10 минут.\n"
                 "Первые 3 дня — бесплатно, без обязательств."
             )
-            await callback.message.answer(text, parse_mode="HTML", reply_markup=_trial_cta_keyboard())
+            await callback.message.answer(text, parse_mode="HTML", reply_markup=_contact_keyboard())
             return
 
         if action == "trial":
@@ -299,6 +309,21 @@ def build_telegram_router(
             await callback.message.answer(text, parse_mode="HTML")
             return
 
+
+    @router.message(Command("cancel"))
+    async def cmd_cancel(message: Message) -> None:
+        chat_id = str(message.chat.id)
+        if chat_id in _saas_wizard:
+            _saas_wizard.pop(chat_id, None)
+            await message.answer(
+                "❌ Заполнение заявки отменено.\n\nЧто хотите сделать?",
+                reply_markup=_platform_menu_keyboard(),
+            )
+        else:
+            await message.answer(
+                "👋 Главное меню платформы «Заявка 24/7»:",
+                reply_markup=_platform_menu_keyboard(),
+            )
 
     @router.message(Command("reset"))
     async def cmd_reset(message: Message) -> None:
@@ -493,7 +518,7 @@ def build_telegram_router(
     async def _send_wow_effect(message: Message, lead: Any, company: Any) -> None:
         """Показывает владельцу, как выглядит входящий лид с другой стороны."""
         await asyncio.sleep(1.2)  # лёгкая пауза — эффект «входящего уведомления»
-        car = getattr(lead, "car_model", "") or "не указано"
+        car = getattr(lead, "car_model", "") or getattr(lead, "car_info", "") or "не указано"
         svc = getattr(lead, "service_interest", "") or "не указано"
         price_hint = getattr(lead, "estimated_price", "") or "уточняется"
         phone = getattr(lead, "phone", "") or "+7 (XXX) XXX-XX-XX"
@@ -524,12 +549,16 @@ def build_telegram_router(
         if storage.is_paused("telegram", chat_id):
             return
 
-        if not is_admin(message) and not rate_limiter.allow(chat_id):
-            await message.answer("Секунду, обрабатываю предыдущее сообщение — напишите чуть позже.")
-            return
-
         # --- SaaS-онбординг: 4-шаговый мастер заявки на тест-драйв ---
         if chat_id in _saas_wizard:
+            if text.lower() in ("отмена", "cancel", "меню", "назад", "/cancel", "/menu"):
+                _saas_wizard.pop(chat_id, None)
+                await message.answer(
+                    "❌ Заполнение заявки отменено.\n\nЧто хотите сделать?",
+                    reply_markup=_platform_menu_keyboard(),
+                )
+                return
+
             wizard = _saas_wizard[chat_id]
             step = wizard.get("step", 1)
 
@@ -603,6 +632,10 @@ def build_telegram_router(
                     reply_markup=_test_scenarios_keyboard(),
                 )
                 return
+
+        if not is_admin(message) and not rate_limiter.allow(chat_id):
+            await message.answer("Секунду, обрабатываю предыдущее сообщение — напишите чуть позже.")
+            return
 
         slug = storage.get_session_company("telegram", chat_id)
 
