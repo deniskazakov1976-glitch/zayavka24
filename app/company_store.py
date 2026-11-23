@@ -105,3 +105,14 @@ class CompanyStore:
         )
         self._profiles[profile.slug] = profile
         return target
+
+    def delete(self, slug: str) -> bool:
+        target = self.companies_dir / f"{slug}.yaml"
+        deleted = False
+        if target.exists():
+            target.unlink()
+            deleted = True
+        if slug in self._profiles:
+            del self._profiles[slug]
+            deleted = True
+        return deleted

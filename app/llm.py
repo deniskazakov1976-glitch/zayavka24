@@ -551,7 +551,6 @@ class LLMService:
             prompt_tokens = 0
             completion_tokens = 0
             total_tokens = 0
-            used_model = self.model
 
             if hasattr(response, "usage") and response.usage:
                 prompt_tokens += getattr(response.usage, "prompt_tokens", 0) or 0
@@ -567,11 +566,10 @@ class LLMService:
                 prompt_tokens = max(1, len(user_message) // 4)
                 completion_tokens = max(1, len(reply_text) // 4)
                 total_tokens = prompt_tokens + completion_tokens
-                used_model = "unknown-usage"
 
             cost_rub = 0.0
             if self.storage:
-                p_rub, c_rub = self.storage.get_model_price(self.model)
+                p_rub, c_rub = self.storage.get_model_price(used_model)
                 cost_rub = round((prompt_tokens / 1000.0) * p_rub + (completion_tokens / 1000.0) * c_rub, 4)
                 t_slug = tenant_slug or getattr(company, "tenant_slug", None) or "default"
                 self.storage.record_llm_usage(

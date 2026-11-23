@@ -37,6 +37,14 @@ def create_app(
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def add_security_headers(request: Request, call_next: Any) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
     @app.get("/health")
     async def health() -> Dict[str, str]:
         return {"status": "ok"}
@@ -100,14 +108,20 @@ def create_app(
         if whatsapp_handler is None:
             raise HTTPException(status_code=503, detail="WhatsApp integration is disabled")
         wh_secret = request.headers.get("x-webhook-secret") or request.query_params.get("secret")
-        return await whatsapp_handler.handle_webhook(payload, company_slug_hint=company_slug, secret=wh_secret)
+        res = await whatsapp_handler.handle_webhook(payload, company_slug_hint=company_slug, secret=wh_secret)
+        if res.get("reason") == "invalid_webhook_secret":
+            raise HTTPException(status_code=403, detail="Invalid webhook secret")
+        return res
 
     @app.post("/webhook/whatsapp")
     async def whatsapp_webhook_default(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         if whatsapp_handler is None:
             raise HTTPException(status_code=503, detail="WhatsApp integration is disabled")
         wh_secret = request.headers.get("x-webhook-secret") or request.query_params.get("secret")
-        return await whatsapp_handler.handle_webhook(payload, secret=wh_secret)
+        res = await whatsapp_handler.handle_webhook(payload, secret=wh_secret)
+        if res.get("reason") == "invalid_webhook_secret":
+            raise HTTPException(status_code=403, detail="Invalid webhook secret")
+        return res
 
     if avito_handler is not None:
         @app.on_event("startup")

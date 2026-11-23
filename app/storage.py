@@ -70,6 +70,7 @@ class Storage:
                 (3, "multitenant_and_users", self._migration_v3),
                 (4, "backups_and_usage", self._migration_v4),
                 (5, "onboarding", self._migration_v5),
+                (6, "smart_followup", self._migration_v6),
             ]
             for version, name, func in migrations:
                 if version not in applied:
@@ -293,6 +294,11 @@ class Storage:
             );
             """
         )
+
+    def _migration_v6(self, conn: sqlite3.Connection) -> None:
+        cols = [row[1] for row in conn.execute("PRAGMA table_info(sessions)").fetchall()]
+        if "followup_sent_at" not in cols:
+            conn.execute("ALTER TABLE sessions ADD COLUMN followup_sent_at TEXT;")
 
     # === Tenants (мультибот) ===
     def save_tenant(
@@ -525,6 +531,44 @@ class Storage:
             if paused_until.tzinfo is None:
                 paused_until = paused_until.replace(tzinfo=timezone.utc)
             return _utcnow() < paused_until
+
+    def get_sessions_needing_followup(
+        self,
+        older_than_hours: float = 3.0,
+        max_age_hours: float = 48.0,
+    ) -> List[Dict[str, Any]]:
+        """Returns active sessions without a captured lead that need a gentle follow-up."""
+        now = _utcnow()
+        min_time = (now - timedelta(hours=max_age_hours)).isoformat()
+        max_time = (now - timedelta(hours=older_than_hours)).isoformat()
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT s.channel, s.chat_id, s.company_slug, s.updated_at
+                FROM sessions s
+                WHERE s.followup_sent_at IS NULL
+                  AND (s.paused_until IS NULL OR s.paused_until <= ?)
+                  AND s.updated_at >= ?
+                  AND s.updated_at <= ?
+                  AND NOT EXISTS (
+                      SELECT 1 FROM leads l
+                      WHERE l.channel = s.channel AND l.chat_id = s.chat_id
+                  )
+                ORDER BY s.updated_at ASC
+                LIMIT 50;
+                """,
+                (now.isoformat(), min_time, max_time),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def mark_followup_sent(self, channel: str, chat_id: str) -> None:
+        now = _utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE sessions SET followup_sent_at = ? WHERE channel = ? AND chat_id = ?",
+                (now, channel, chat_id),
+            )
 
     def add_message(self, channel: str, chat_id: str, role: str, content: str) -> None:
         now = _utcnow().isoformat()

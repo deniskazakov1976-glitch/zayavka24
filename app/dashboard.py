@@ -1,12 +1,14 @@
+import csv
+import io
 import logging
 import re
 import secrets
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
@@ -79,10 +81,44 @@ class CreateCompanyRequest(BaseModel):
     work_hours: str = "Ежедневно с 10:00 до 20:00"
     discount_offer: str = "скидку 10% на первый визит"
     media_reply_promise: str = "в течение 15–30 минут в рабочее время"
+    notify_chat_id: Optional[int] = None
+    crm_type: Literal["none", "webhook", "amocrm", "bitrix24"] = "none"
+    crm_webhook_url: str = ""
+    crm_api_token: str = ""
+    crm_subdomain: str = ""
+    whatsapp_enabled: bool = False
+    whatsapp_instance_id: str = ""
+    whatsapp_api_token: str = ""
+    whatsapp_webhook_secret: str = ""
     services: List[str] = Field(default_factory=list)
     advantages: List[str] = Field(default_factory=list)
     faq: List[str] = Field(default_factory=list)
     extra_rules: List[str] = Field(default_factory=list)
+
+
+class UpdateCompanyRequest(BaseModel):
+    company_name: Optional[str] = None
+    city: Optional[str] = None
+    niche: Optional[str] = None
+    manager_name: Optional[str] = None
+    manager_role: Optional[str] = None
+    address: Optional[str] = None
+    work_hours: Optional[str] = None
+    discount_offer: Optional[str] = None
+    media_reply_promise: Optional[str] = None
+    notify_chat_id: Optional[int] = None
+    crm_type: Optional[Literal["none", "webhook", "amocrm", "bitrix24"]] = None
+    crm_webhook_url: Optional[str] = None
+    crm_api_token: Optional[str] = None
+    crm_subdomain: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = None
+    whatsapp_instance_id: Optional[str] = None
+    whatsapp_api_token: Optional[str] = None
+    whatsapp_webhook_secret: Optional[str] = None
+    services: Optional[List[str]] = None
+    advantages: Optional[List[str]] = None
+    faq: Optional[List[str]] = None
+    extra_rules: Optional[List[str]] = None
 
 
 class CreateTenantRequest(BaseModel):
@@ -315,6 +351,16 @@ def build_dashboard_router(
         for p in company_store.list_for_tenant(user.scope_tenant):
             item = p.model_dump()
             item["demo_link"] = demo_link_for(p)
+            item["crm_has_token"] = bool(p.crm_api_token)
+            if item.get("crm_api_token"):
+                item["crm_api_token"] = "••••••••"
+            item["whatsapp_has_token"] = bool(p.whatsapp_api_token)
+            if item.get("whatsapp_api_token"):
+                item["whatsapp_api_token"] = "••••••••"
+            wh_secret = item.get("whatsapp_webhook_secret") or ""
+            item["whatsapp_webhook_url"] = (
+                f"/webhook/whatsapp?secret={wh_secret}" if wh_secret else "/webhook/whatsapp"
+            )
             result.append(item)
         return result
 
@@ -340,10 +386,105 @@ def build_dashboard_router(
             "message": f"Компания «{profile.company_name}» успешно сохранена!",
         }
 
+    @router.put("/api/companies/{slug}")
+    async def api_update_company(
+        slug: str,
+        payload: UpdateCompanyRequest,
+        user: CurrentUser = Depends(require_writer),
+    ) -> Dict[str, Any]:
+        ensure_owner(user, slug)
+        existing = company_store.get(slug)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Компания не найдена")
+
+        update_dict = payload.model_dump(exclude_unset=True)
+        # Preserve sensitive tokens if placeholder or not updated
+        if "crm_api_token" in update_dict:
+            if not update_dict["crm_api_token"] or update_dict["crm_api_token"] == "••••••••":
+                update_dict.pop("crm_api_token")
+        if "whatsapp_api_token" in update_dict:
+            if not update_dict["whatsapp_api_token"] or update_dict["whatsapp_api_token"] == "••••••••":
+                update_dict.pop("whatsapp_api_token")
+
+        curr_data = existing.model_dump()
+        curr_data.update(update_dict)
+        updated_profile = CompanyProfile(**curr_data)
+        company_store.save(updated_profile)
+        company_store.reload()
+        return {
+            "status": "ok",
+            "slug": updated_profile.slug,
+            "demo_link": demo_link_for(updated_profile),
+            "message": f"Профиль компании «{updated_profile.company_name}» обновлён!",
+        }
+
+    @router.delete("/api/companies/{slug}")
+    async def api_delete_company(
+        slug: str,
+        user: CurrentUser = Depends(require_writer),
+    ) -> Dict[str, Any]:
+        ensure_owner(user, slug)
+        existing = company_store.get(slug)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Компания не найдена")
+
+        deleted = company_store.delete(slug)
+        return {
+            "status": "ok",
+            "deleted": deleted,
+            "message": f"Компания «{slug}» удалена",
+        }
+
     @router.get("/api/leads")
     async def api_leads(user: CurrentUser = Depends(current_user)) -> List[Dict[str, Any]]:
         leads = storage.list_recent_leads(limit=50, company_slugs=scope_slugs(user))
         return [le.model_dump() for le in leads]
+
+    @router.get("/api/leads/export.csv")
+    async def api_export_leads_csv(user: CurrentUser = Depends(current_user)) -> Response:
+        leads = storage.list_recent_leads(limit=1000, company_slugs=scope_slugs(user))
+        output = io.StringIO()
+        # UTF-8 BOM so Excel opens Cyrillic properly
+        output.write("\ufeff")
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow([
+            "ID",
+            "Дата создания",
+            "Канал",
+            "Компания",
+            "Имя клиента",
+            "Телефон",
+            "Автомобиль",
+            "Интересующая услуга",
+            "Ориентир цены",
+            "Удобное время",
+            "Комментарий / резюме",
+            "Ссылка на чат Авито",
+        ])
+        for idx, le in enumerate(leads, 1):
+            created_str = le.created_at.strftime("%Y-%m-%d %H:%M:%S") if le.created_at else ""
+            writer.writerow([
+                idx,
+                created_str,
+                le.channel,
+                le.company_slug,
+                le.client_name or "",
+                le.phone or "",
+                le.car_model or "",
+                le.service_interest or "",
+                le.estimated_price or "",
+                le.preferred_time or "",
+                le.summary or "",
+                le.avito_chat_url or "",
+            ])
+
+        csv_content = output.getvalue().encode("utf-8")
+        filename = f"leads_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return Response(
+            content=csv_content,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @router.get("/api/sessions")
     async def api_sessions(user: CurrentUser = Depends(current_user)) -> List[Dict[str, Any]]:

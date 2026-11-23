@@ -190,8 +190,30 @@ class AvitoWebhookHandler:
             if message_id:
                 self.storage.mark_event_processed("avito", message_id, status="processing")
 
-            # K4: Persistent echo check
-            bot_user_id = getattr(self.avito_client, "user_id", None)
+            company_slug = (
+                payload.get("_company_slug")
+                or self.storage.get_session_company("avito", chat_id)
+                or self.default_company_slug
+            )
+            company = self.company_store.get_or_default(company_slug, self.default_company_slug)
+            if not company:
+                logger.error("No company profile available for Avito chat %s", chat_id)
+                return {"status": "error", "reason": "no_company_profile"}
+
+            user_id_raw = value.get("user_id") or payload.get("_avito_user_id")
+            business_user_id: Optional[int] = None
+            if user_id_raw is not None:
+                try:
+                    business_user_id = int(user_id_raw)
+                except (ValueError, TypeError):
+                    business_user_id = None
+            active_client = self._get_client_for_account(company.slug, avito_user_id=business_user_id)
+            if not active_client:
+                logger.warning("No active AvitoClient configured for company %s", company.slug)
+                return {"status": "error", "reason": "no_avito_client"}
+
+            # K4: Persistent echo check using active tenant client's user_id
+            bot_user_id = getattr(active_client, "user_id", None)
             if bot_user_id is not None and author_id == bot_user_id:
                 if message_id and message_id in self._bot_sent_message_ids:
                     self._bot_sent_message_ids.discard(message_id)
@@ -204,11 +226,12 @@ class AvitoWebhookHandler:
                     channel="avito",
                     chat_id=chat_id,
                     hours=self.manual_pause_hours,
-                    company_slug=self.default_company_slug,
+                    company_slug=company.slug,
                 )
                 logger.info(
-                    "Auto-paused Avito chat %s for %dh after manual owner reply",
+                    "Auto-paused Avito chat %s (company=%s) for %dh after manual owner reply",
                     chat_id,
+                    company.slug,
                     self.manual_pause_hours,
                 )
                 return {"status": "paused", "reason": "manual_owner_reply"}
@@ -217,26 +240,7 @@ class AvitoWebhookHandler:
                 logger.info("Avito chat %s is paused; skipping AI reply", chat_id)
                 return {"status": "ignored", "reason": "paused"}
 
-            company_slug = (
-                payload.get("_company_slug")
-                or self.storage.get_session_company("avito", chat_id)
-                or self.default_company_slug
-            )
-            company = self.company_store.get_or_default(company_slug, self.default_company_slug)
-            if not company:
-                logger.error("No company profile available for Avito chat %s", chat_id)
-                return {"status": "error", "reason": "no_company_profile"}
-
             self.storage.upsert_session("avito", chat_id, company.slug)
-
-            user_id_raw = value.get("user_id") or payload.get("_avito_user_id")
-            business_user_id: Optional[int] = None
-            if user_id_raw is not None:
-                try:
-                    business_user_id = int(user_id_raw)
-                except (ValueError, TypeError):
-                    business_user_id = None
-            active_client = self._get_client_for_account(company.slug, avito_user_id=business_user_id)
 
             # Quota check (Block B: TZ B3) — проверяем ДО вызова генерации для текста и медиа
             if self.quota_service:

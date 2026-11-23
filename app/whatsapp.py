@@ -161,13 +161,51 @@ class WhatsAppWebhookHandler:
         if type_message in ("imageMessage", "audioMessage", "voiceMessage", "documentMessage"):
             has_phone = bool(sender_phone and len(sender_phone) >= 10)
             media_kind = "photo" if type_message == "imageMessage" else ("voice" if "audio" in type_message or "voice" in type_message else "file")
-            reply_text = build_media_reply(
-                company=company,
-                media_type=media_kind,
-                has_phone=has_phone,
-            )
+
+            file_data = msg_data.get("fileMessageData") or {}
+            download_url = file_data.get("downloadUrl")
+            caption = file_data.get("caption") or ""
+
+            # Check quota for Vision processing
+            t_slug = getattr(company, "tenant_slug", None) or "default"
+            quota_ok = True
+            if self.quota_service:
+                q_status = self.quota_service.check(t_slug)
+                if not q_status.allowed:
+                    quota_ok = False
+
+            reply_text = None
+            if type_message == "imageMessage" and download_url and caption and quota_ok:
+                try:
+                    history_msgs = self.storage.get_history("whatsapp", chat_id, limit=6)
+                    prompt_msg = caption
+                    llm_res = await self.llm.generate_reply(
+                        company=company,
+                        history=history_msgs,
+                        user_message=prompt_msg,
+                        channel="whatsapp",
+                        chat_id=chat_id,
+                        image_url=download_url,
+                        tenant_slug=t_slug,
+                    )
+                    reply_text = llm_res.text
+                    if llm_res.lead and not self.storage.has_lead("whatsapp", chat_id, llm_res.lead.phone):
+                        self.storage.save_lead(llm_res.lead)
+                        if self.notifier:
+                            await self.notifier.notify_lead(llm_res.lead, company)
+                except Exception as exc:
+                    logger.warning("WhatsApp vision reply failed: %s, falling back to media reply", exc)
+
+            if not reply_text:
+                reply_text = build_media_reply(
+                    company=company,
+                    media_type=media_kind,
+                    has_phone=has_phone,
+                )
+
             # Record user media stub in history
-            self.storage.add_message("whatsapp", chat_id, "user", f"[{media_kind.upper()}]")
+            u_text = f"[{media_kind.upper()}] {caption}".strip()
+            self.storage.add_message("whatsapp", chat_id, "user", u_text)
             # Pre-record pending echo to defeat race conditions (K4)
             rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=reply_text, status="pending")
             sent_res = await wa_client.send_message(chat_id, reply_text)

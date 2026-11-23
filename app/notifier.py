@@ -54,11 +54,43 @@ class LeadNotifier:
         bot: Optional[Bot],
         default_chat_id: Optional[int],
         crm_dispatcher: Optional[CRMDispatcher] = None,
+        bot_manager: Optional[object] = None,
+        storage: Optional[object] = None,
     ) -> None:
         self.bot = bot
         self.default_chat_id = default_chat_id
         self.crm_dispatcher = crm_dispatcher or CRMDispatcher()
+        self.bot_manager = bot_manager
+        self.storage = storage
         self._background_tasks: set[asyncio.Task] = set()
+
+    def _resolve_bot_and_target(self, company: Optional[CompanyProfile] = None) -> tuple[Optional[Bot], Optional[int]]:
+        tenant_slug = getattr(company, "tenant_slug", None) or "default"
+
+        # 1. Resolve bot: tenant bot if available, otherwise primary_bot or self.bot
+        active_bot = self.bot
+        if self.bot_manager:
+            t_bot = getattr(self.bot_manager, "get_bot", lambda s: None)(tenant_slug)
+            if t_bot:
+                active_bot = t_bot
+            elif not active_bot and hasattr(self.bot_manager, "primary_bot"):
+                active_bot = self.bot_manager.primary_bot()
+
+        # 2. Resolve target_chat_id by priority:
+        # company.notify_chat_id -> tenant["owner_telegram_id"] -> self.default_chat_id
+        target_chat_id = company.notify_chat_id if company and company.notify_chat_id is not None else None
+        if target_chat_id is None and self.storage and tenant_slug != "default":
+            try:
+                t = getattr(self.storage, "get_tenant", lambda s: None)(tenant_slug)
+                if t and t.get("owner_telegram_id"):
+                    target_chat_id = t["owner_telegram_id"]
+            except Exception as e:
+                logger.warning("Error fetching tenant owner_telegram_id: %s", e)
+
+        if target_chat_id is None:
+            target_chat_id = self.default_chat_id
+
+        return active_bot, target_chat_id
 
     async def notify(self, lead: LeadInfo, company: Optional[CompanyProfile] = None) -> bool:
         # 1. Asynchronously dispatch lead to external CRM if configured (amoCRM, Bitrix24, Webhook)
@@ -70,18 +102,14 @@ class LeadNotifier:
             except Exception as crm_err:
                 logger.warning("Failed to schedule CRM dispatch: %s", crm_err)
 
-        target_chat_id = (
-            company.notify_chat_id
-            if company and company.notify_chat_id is not None
-            else self.default_chat_id
-        )
-        if not self.bot or target_chat_id is None:
+        active_bot, target_chat_id = self._resolve_bot_and_target(company)
+        if not active_bot or target_chat_id is None:
             logger.info("Lead captured (no Telegram notify target configured): %s", lead.phone)
             return False
 
         text = format_lead_message(lead, company)
         try:
-            await self.bot.send_message(
+            await active_bot.send_message(
                 chat_id=target_chat_id,
                 text=text,
                 parse_mode="HTML",
@@ -122,7 +150,8 @@ class LeadNotifier:
         gap: KnowledgeGap,
         company: Optional[CompanyProfile] = None,
     ) -> bool:
-        if not self.bot or self.default_chat_id is None:
+        active_bot, target_chat_id = self._resolve_bot_and_target(company)
+        if not active_bot or target_chat_id is None:
             return False
         comp_name = company.company_name if company else gap.company_slug
         if gap.channel == "avito":
@@ -139,8 +168,8 @@ class LeadNotifier:
             f"💡 <i>Откройте дашборд во вкладке «Самообучение», чтобы дать ответ и обучить бота в 1 клик!</i>"
         )
         try:
-            await self.bot.send_message(
-                chat_id=self.default_chat_id,
+            await active_bot.send_message(
+                chat_id=target_chat_id,
                 text=text,
                 parse_mode="HTML",
                 disable_web_page_preview=True,

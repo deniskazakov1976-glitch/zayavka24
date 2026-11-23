@@ -106,32 +106,32 @@ async def run() -> None:
     notifier = LeadNotifier(
         bot=bot_manager.primary_bot(),
         default_chat_id=settings.default_notify_chat_id,
+        bot_manager=bot_manager,
+        storage=storage,
     )
 
     avito_client: AvitoClient | None = None
-    avito_handler: AvitoWebhookHandler | None = None
-    if settings.avito_enabled:
-        if not (settings.avito_client_id and settings.avito_client_secret and settings.avito_user_id):
-            raise RuntimeError(
-                "AVITO_ENABLED=true, but AVITO_CLIENT_ID / AVITO_CLIENT_SECRET / AVITO_USER_ID are missing."
-            )
+    if settings.avito_enabled and settings.avito_client_id and settings.avito_client_secret and settings.avito_user_id:
         avito_client = AvitoClient(
             client_id=settings.avito_client_id,
             client_secret=settings.avito_client_secret,
             user_id=settings.avito_user_id,
         )
-        avito_handler = AvitoWebhookHandler(
-            avito_client=avito_client,
-            company_store=company_store,
-            storage=storage,
-            llm=llm,
-            notifier=notifier,
-            default_company_slug=settings.avito_default_company_slug,
-            manual_pause_hours=settings.avito_manual_pause_hours,
-            max_history_messages=settings.max_history_messages,
-            quota_service=quota_service,
-            alert_manager=alert_manager,
-        )
+
+    # Always instantiate avito_handler so multi-tenant accounts in avito_accounts work
+    avito_handler = AvitoWebhookHandler(
+        avito_client=avito_client,
+        company_store=company_store,
+        storage=storage,
+        llm=llm,
+        notifier=notifier,
+        default_company_slug=settings.avito_default_company_slug,
+        manual_pause_hours=settings.avito_manual_pause_hours,
+        max_history_messages=settings.max_history_messages,
+        quota_service=quota_service,
+        alert_manager=alert_manager,
+    )
+    tasks.append(asyncio.create_task(avito_handler.start_workers()))
 
     from app.whatsapp import WhatsAppWebhookHandler
     whatsapp_handler = WhatsAppWebhookHandler(
@@ -173,6 +173,15 @@ async def run() -> None:
                 settings.webhook_port,
             )
 
+    from app.followup import FollowupService
+    followup_service = FollowupService(
+        storage=storage,
+        company_store=company_store,
+        bot_manager=bot_manager,
+        avito_client=avito_client,
+    )
+    followup_service.start()
+
     # Фоновый самоконтроль здоровья системы (Блок A: каждые 5 минут)
     async def _health_monitor_loop() -> None:
         while True:
@@ -196,6 +205,20 @@ async def run() -> None:
 
     tasks.append(asyncio.create_task(_health_monitor_loop(), name="health_monitor"))
 
+    # Фоновая очистка 152-ФЗ (раз в сутки)
+    async def _retention_purge_loop() -> None:
+        while True:
+            try:
+                await asyncio.sleep(86400)
+                purged = storage.purge_expired(message_days=90, lead_days=365)
+                logger.info("152-ФЗ плановая очистка: %s", purged)
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.exception("Ошибка в фоновой очистке 152-ФЗ: %s", exc)
+
+    tasks.append(asyncio.create_task(_retention_purge_loop(), name="retention_purge"))
+
     logger.info("Запущено. Профилей компаний: %d", len(company_store.list_all()))
     try:
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -203,6 +226,7 @@ async def run() -> None:
             if isinstance(result, Exception):
                 logger.error("Фоновая задача завершилась с ошибкой: %s", result)
     finally:
+        followup_service.stop()
         if avito_client:
             await avito_client.close()
         await backup_scheduler.stop()
