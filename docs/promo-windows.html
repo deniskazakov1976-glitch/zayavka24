@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#060910">
+  <title>Заявка 24/7 для Оконных Компаний — ИИ-диспетчер для Авито и WhatsApp</title>
+  
+  <!-- Open Graph / Meta для Telegram, WhatsApp, VK -->
+  <meta property="og:type" content="video.other">
+  <meta property="og:title" content="ИИ-диспетчер для окон и ремонта: ответ за 15 сек и 0 потерянных клиентов">
+  <meta property="og:description" content="Пока мастер на монтаже — ИИ отвечает на Авито за 15 секунд, квалифицирует заказ строго по прайсу и передает готовый контакт в Telegram. Посмотрите 40-сек видео.">
+  <meta property="og:image" content="https://deniskazakov1976-glitch.github.io/zayavka24/poster_windows.webp">
+  <meta property="og:video" content="https://deniskazakov1976-glitch.github.io/zayavka24/zayavka24_windows_promo_16x9.mp4">
+  <meta property="og:video:type" content="video/mp4">
+  <meta property="og:video:width" content="1920">
+  <meta property="og:video:height" content="1080">
+  <meta name="twitter:card" content="player">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #060910;
+      --surface: #0c121d;
+      --surface-card: #111a28;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(0, 229, 153, 0.35);
+      --primary: #00e599;
+      --primary-glow: rgba(0, 229, 153, 0.25);
+      --cyan: #38bdf8;
+      --amber: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 80% 40%, rgba(0, 229, 153, 0.08) 0%, transparent 50%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    /* Header */
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(0, 229, 153, 0.08);
+      border: 1px solid rgba(0, 229, 153, 0.3);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: clamp(26px, 4vw, 42px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span.highlight {
+      background: linear-gradient(135deg, #38bdf8 0%, #00e599 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      font-size: clamp(15px, 2vw, 18px);
+      color: var(--text-muted);
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    /* Video Player Box */
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--border-accent);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 229, 153, 0.12);
+      margin-bottom: 36px;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .video-overlay-btn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(6, 9, 16, 0.88);
+      color: var(--primary);
+      border: 1px solid rgba(0, 229, 153, 0.45);
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+    }
+
+    .video-overlay-btn:hover {
+      background: var(--primary);
+      color: #060910;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px var(--primary-glow);
+    }
+
+    /* Action Buttons */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00e599 0%, #00c785 100%);
+      color: #060910;
+      box-shadow: 0 10px 25px var(--primary-glow);
+      border: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(0, 229, 153, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--surface-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Benefits Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .feature-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    .feature-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      width: 100%;
+    }
+
+    footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Top badge -->
+    <div class="badge-pill">
+      <span class="badge-dot"></span>
+      Специально для оконных мастеров и сервисов
+    </div>
+
+    <!-- Title -->
+    <h1>
+      Пока вы на замере или монтаже — <br>
+      <span class="highlight">ИИ продаёт ваши услуги на Авито за 15 секунд</span>
+    </h1>
+    <p class="subtitle">
+      Посмотрите 77-секундный моушен-ролик о том, как перестать сливать горячих клиентов, когда вам некогда ответить в чате.
+    </p>
+
+    <!-- Video Player -->
+    <div class="video-wrapper">
+      <video id="promoVideo" controls autoplay muted loop playsinline poster="poster_windows.webp">
+        <source src="zayavka24_windows_promo_16x9.mp4" type="video/mp4">
+        Ваш браузер не поддерживает видео HTML5.
+      </video>
+      <button type="button" class="video-overlay-btn" id="soundBtn" onclick="toggleSound()">
+        🔊 Включить звук
+      </button>
+    </div>
+
+    <!-- Direct CTAs -->
+    <div class="actions-grid">
+      <a href="https://t.me/Zayavka24AI_bot?start=demo_windows" target="_blank" class="btn btn-primary">
+        👉 Протестировать демо в Telegram
+      </a>
+      <a href="https://t.me/dkazak1999" target="_blank" class="btn btn-secondary">
+        💬 Написать Денису (основатель)
+      </a>
+    </div>
+
+    <!-- Key Values -->
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Ответ за 15 секунд</div>
+        <div class="feature-desc">Клиент на Авито пишет 3–4 мастерам сразу. Кто первый ответил и задал вопрос — тот и забрал замер.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-title">Строго по прайсу</div>
+        <div class="feature-desc">Резина EPDM/Schlegel, регулировка створок, замена стеклопакетов — расчет по вашим ценам без отсебятины.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📲</div>
+        <div class="feature-title">Номер в Telegram</div>
+        <div class="feature-desc">Квалифицирует клиента, забирает телефон и адрес, сразу отправляет карточку лида вам в Telegram.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛑</div>
+        <div class="feature-title">Умная автопауза</div>
+        <div class="feature-desc">Зашли в чат Авито и написали клиенту сами? Бот мгновенно замолкает и не мешает живому общению.</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Платформа «Заявка 24/7» · Бесплатный тест-драйв 3 дня на ваших реальных объявлениях · <a href="https://t.me/dkazak1999" target="_blank">Связаться в Telegram</a></p>
+    </footer>
+
+  </div>
+
+  <script>
+    const video = document.getElementById('promoVideo');
+    const soundBtn = document.getElementById('soundBtn');
+
+    function toggleSound() {
+      if (video.muted) {
+        video.muted = false;
+        soundBtn.innerHTML = '🔇 Выключить звук';
+      } else {
+        video.muted = true;
+        soundBtn.innerHTML = '🔊 Включить звук';
+      }
+    }
+
+    video.addEventListener('volumechange', () => {
+      soundBtn.innerHTML = video.muted ? '🔊 Включить звук' : '🔇 Выключить звук';
+    });
+  </script>
+
+</body>
+</html>
