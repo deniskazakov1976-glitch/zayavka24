@@ -1,7 +1,9 @@
+from pathlib import Path
 import secrets
 from typing import Any, Callable, Dict, Optional
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request, Response
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from app.auth import AuthService
@@ -124,6 +126,10 @@ def create_app(
             notifier=notifier,
         )
         app.include_router(dashboard_router)
+
+    static_path = Path("static")
+    if static_path.exists():
+        app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
     return app
 

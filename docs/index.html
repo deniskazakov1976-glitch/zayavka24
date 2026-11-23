@@ -1616,6 +1616,18 @@
           <div class="proof-text">мгновенное создание сделки в amoCRM, Битрикс24 или Webhook</div>
         </div>
       </div>
+
+      <!-- Motion Promo Video (Full HD 16:9 Motion Explainer) -->
+      <div style="position:relative; max-width:960px; margin:0 auto 64px; border-radius:20px; overflow:hidden; border:1px solid rgba(0,229,153,0.28); box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+        <video id="promo-video" autoplay muted loop playsinline poster="poster.webp" style="width:100%; display:block; aspect-ratio:16/9; background:#060910;">
+          <source src="zayavka24_motion_promo_16x9.mp4" type="video/mp4">
+          <source src="/static/zayavka24_motion_promo_16x9.mp4" type="video/mp4">
+        </video>
+        <button type="button" onclick="const v=document.getElementById('promo-video'); v.muted=!v.muted; this.innerText=v.muted?'Включить звук':'Выключить звук';"
+          style="position:absolute; bottom:16px; right:16px; background:rgba(6,9,16,0.85); color:#00e599; border:1px solid rgba(0,229,153,0.45); border-radius:999px; padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer; backdrop-filter:blur(8px); z-index:10;">
+          Включить звук
+        </button>
+      </div>
     </div>
   </section>
 
