@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,10 +12,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # LLM (ProxyAPI / VseGPT / OpenAI)
+    # LLM (ProxyAPI / VseGPT / OpenAI / AnyModel)
     llm_base_url: str = "https://api.proxyapi.ru/openai/v1"
     llm_api_key: str = ""
-    llm_model: str = "gpt-4o-mini"
+    llm_model: str = "gc/gemini-2.5-flash"
+    llm_fallback_models: Union[List[str], str] = ["cx/gpt-6-luna", "ds/deepseek-v4-flash-vision"]
     llm_temperature: float = 0.5
 
     # Telegram
@@ -89,6 +90,17 @@ class Settings(BaseSettings):
             return [int(item.strip()) for item in value.split(",") if item.strip()]
         if isinstance(value, list):
             return [int(item) for item in value]
+        return []
+
+    @field_validator("llm_fallback_models", mode="after")
+    @classmethod
+    def parse_fallback_models(cls, value: object) -> List[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
         return []
 
 

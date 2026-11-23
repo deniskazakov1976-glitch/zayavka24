@@ -49,6 +49,7 @@ async def run() -> None:
         api_key=settings.llm_api_key,
         base_url=settings.llm_base_url,
         model=settings.llm_model,
+        fallback_models=settings.llm_fallback_models,
         temperature=settings.llm_temperature,
         timeout=settings.llm_timeout_sec,
         guardrails_mode=settings.guardrails_mode,

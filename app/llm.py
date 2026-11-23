@@ -104,14 +104,200 @@ def extract_phone_fallback(text: str) -> Optional[str]:
     return normalize_phone(match.group(0))
 
 
+CAR_REGEX = re.compile(
+    r"(?i)\b("
+    r"toyota(?:\s+camry|\s+rav4|\s+corolla|\s+prado|\s+land\s+cruiser)?|"
+    r"camry|rav4|corolla|prado|"
+    r"bmw(?:\s+x[1-7]|\s+[1-8]\s*сери[яи]|\s+m[3-5])?|"
+    r"mercedes(?:-benz)?(?:\s+[a-z]-?class|\s+amg|\s+e\s*класс|\s+c\s*класс|\s+s\s*класс)?|"
+    r"audi(?:\s+a[1-8]|\s+q[3-8])?|"
+    r"volkswagen|vw(?:\s+tiguan|\s+polo|\s+passat|\s+touareg)?|"
+    r"tiguan|polo|passat|touareg|"
+    r"geely(?:\s+monjaro|\s+coolray|\s+atlas|\s+tugella)?|"
+    r"monjaro|coolray|atlas|tugella|"
+    r"haval(?:\s+jolion|\s+f7|\s+dargo|\s+h9)?|jolion|"
+    r"chery(?:\s+tiggo\s*[478]?(?:\s*pro)?)?|"
+    r"kia(?:\s+rio|\s+k5|\s+sportage|\s+ceed|\s+cerato)?|rio|k5|sportage|"
+    r"hyundai(?:\s+solaris|\s+creta|\s+tucson|\s+santa\s+fe)?|solaris|creta|tucson|"
+    r"lexus(?:\s+rx|\s+nx|\s+lx|\s+es)?|"
+    r"porsche(?:\s+cayenne|\s+macan|\s+panamera)?|"
+    r"skoda(?:\s+octavia|\s+rapid|\s+kodiaq)?|octavia|rapid|kodiaq|"
+    r"nissan(?:\s+qashqai|\s+x-trail|\s+juke)?|qashqai|x-trail|"
+    r"mazda(?:\s+[36]|\s+cx-[359])?|"
+    r"lada(?:\s+vesta|\s+granta|\s+niva)?|"
+    r"тойота(?:\s+камри|\s+рав4|\s+королла)?|камри|рав4|королла|"
+    r"бмв(?:\s+х[1-7]|\s+[1-8]\s*сери[яи])?|"
+    r"мерседес|ауди|фольксваген|тигуан|поло|"
+    r"джили(?:\s+монжаро|\s+кулрей|\s+атлас)?|монжаро|кулрей|атлас|"
+    r"хавал(?:\s+джолион|\s+ф7)?|джолион|"
+    r"чери(?:\s+тигго)?|тигго|"
+    r"киа(?:\s+рио|\s+к5|\s+спортейдж)?|рио|к5|спортейдж|"
+    r"хендай|хёндай(?:\s+солярис|\s+крета|\s+туссан)?|солярис|крета|туссан|"
+    r"шкода(?:\s+октавия|\s+рапид|\s+кодиак)?|октавия|рапид|кодиак|"
+    r"лексус|ниссан|мазда|"
+    r"лада(?:\s+веста|\s+гранта|\s+нива)?|веста|гранта|нива"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def extract_car_model(text: str) -> Optional[str]:
+    match = CAR_REGEX.search(text)
+    if not match:
+        return None
+    val = match.group(0).strip()
+    return val.title() if len(val) > 3 else val.upper()
+
+
+def match_company_service(user_message: str, services: List[str]) -> Optional[str]:
+    """Finds the most specific service from the company's price list matching user intent."""
+    if not services:
+        return None
+    m = user_message.lower()
+
+    # Bumper / body part painting
+    if ("бампер" in m or "крыл" in m or "двер" in m or "капот" in m) and ("крас" in m or "покрас" in m or "маляр" in m):
+        for s in services:
+            s_low = s.lower()
+            if "бампер" in s_low or "полная покраска" in s_low or "покраска элемента" in s_low:
+                return s
+
+    # Local painting
+    if "локальн" in m and ("крас" in m or "покрас" in m):
+        for s in services:
+            if "локальная" in s.lower():
+                return s
+
+    # General painting
+    if "крас" in m or "покрас" in m or "маляр" in m:
+        for s in services:
+            if "покраска" in s.lower() or "окрас" in s.lower():
+                return s
+
+    # Headlight wrapping or polishing
+    if "фар" in m and ("плен" in m or "плён" in m or "оклей" in m or "бронир" in m or "полир" in m):
+        for s in services:
+            if "фар" in s.lower():
+                return s
+
+    # Risk zones PPF wrapping
+    if ("зон" in m or "морда" in m or "передок" in m) and ("оклей" in m or "плен" in m or "плён" in m or "защит" in m):
+        for s in services:
+            if "зон риска" in s.lower():
+                return s
+
+    # Full PPF wrapping
+    if ("полн" in m or "весь" in m or "кузов" in m or "целиком" in m) and ("оклей" in m or "плен" in m or "плён" in m):
+        for s in services:
+            if "полная оклейка" in s.lower():
+                return s
+
+    # General PPF wrapping
+    if "оклей" in m or "плен" in m or "плён" in m or "полиуретан" in m or "винил" in m:
+        for s in services:
+            if "оклейка" in s.lower() or "пленк" in s.lower() or "плёнк" in s.lower():
+                return s
+
+    # Polishing
+    if "полиров" in m:
+        for s in services:
+            if "полировка" in s.lower():
+                return s
+
+    # Ceramic coating
+    if "керамик" in m or "жидк" in m:
+        for s in services:
+            if "керамич" in s.lower() or "покрытие" in s.lower():
+                return s
+
+    # Dry cleaning
+    if "химчист" in m or "салон" in m:
+        for s in services:
+            if "химчистка" in s.lower():
+                return s
+
+    # Soundproofing
+    if "шум" in m or "вибро" in m:
+        for s in services:
+            if "шумоизоляц" in s.lower():
+                return s
+
+    return None
+
+
+def build_contextual_fallback(user_message: str, company: CompanyProfile) -> str:
+    """Smart deterministic response when LLM is unavailable, using real profile data."""
+    text_low = user_message.lower()
+    car = extract_car_model(user_message)
+    matched_svc = match_company_service(user_message, company.services)
+
+    # 1. Schedule & working hours inquiry
+    if any(k in text_low for k in ("воскресень", "суббот", "график", "режим", "до скольки", "со скольки", "когда работаете", "выходн", "часы")):
+        schedule_text = company.work_hours or "ежедневно"
+        addr_text = f" Наш бокс: {company.address}." if company.address else ""
+        return (
+            f"Здравствуйте! Мы работаем {schedule_text}.{addr_text} "
+            f"На какое время вам удобно подъехать на осмотр к мастеру {company.manager_name}? "
+            f"Напишите ваш номер телефона, чтобы забронировать удобный слот."
+        )
+
+    # 2. Discount / price objection inquiry
+    if any(k in text_low for k in ("скидк", "скидку", "дешев", "дешевле", "дорого", "конкурент", "гараж", "сделайте скидку")):
+        offer = company.discount_offer or "скидку 10% на первый визит"
+        return (
+            f"Мы держим высокое качество работ, используем профессиональные материалы и даём официальную гарантию. "
+            f"Сделать большую скидку в ущерб качеству мы не можем, но для новых клиентов дарим {offer}! "
+            f"Напишите ваш номер телефона — мастер {company.manager_name} закрепит за вами спецпредложение."
+        )
+
+    # 3. Warranty / guarantee inquiry
+    if any(k in text_low for k in ("гаранти", "облезет", "переделаете", "брак", "отклеит")):
+        addr_text = f" по адресу {company.address}" if company.address else ""
+        return (
+            f"Да, мы даём официальную гарантию на все виды работ и материалы! "
+            f"Если возникнут любые замечания — устраняем бесплатно по гарантии. "
+            f"Приезжайте к нам{addr_text} на осмотр к мастеру {company.manager_name}. "
+            f"Оставьте ваш номер телефона, чтобы согласовать визит."
+        )
+
+    # 4. Specific service matched
+    if matched_svc:
+        car_part = f"По автомобилю {car}:\n" if car else "По вашему запросу:\n"
+        addr = f" ({company.address})" if company.address else ""
+        discount = f" и {company.discount_offer}" if company.discount_offer else ""
+        return (
+            f"Здравствуйте! {car_part}"
+            f"• {matched_svc}\n\n"
+            f"Точную смету мастер {company.manager_name} назовёт после быстрого осмотра детали в боксе{addr}. "
+            f"Напишите ваш номер телефона — зафиксирую за вами предварительный расчёт{discount}!"
+        )
+
+    # 5. Car detected, but service not clear
+    if car:
+        return (
+            f"Здравствуйте! Принял ваш запрос по автомобилю {car}. "
+            f"Подскажите, какие именно работы планируете выполнить (покраска, оклейка плёнкой, полировка, химчистка)? "
+            f"Сразу сориентирую по точной стоимости и срокам!"
+        )
+
+    # 6. Generic greeting / unclear query
+    promise_tail = f" — ответит {company.media_reply_promise}" if company.media_reply_promise else ""
+    return (
+        f"Добрый день! На связи студия «{company.company_name}». "
+        f"Подскажите, какой у вас автомобиль и что планируете сделать (покраска, оклейка, полировка)? "
+        f"Сориентирую по ценам или передам мастеру {company.manager_name} в бокс{promise_tail}."
+    )
+
+
 class LLMService:
-    """OpenAI-compatible LLM wrapper (works with ProxyAPI, VseGPT, OpenAI)."""
+    """OpenAI-compatible LLM wrapper (works with ProxyAPI, VseGPT, OpenAI, AnyModel)."""
 
     def __init__(
         self,
         api_key: str,
         base_url: str,
         model: str = "gpt-4o-mini",
+        fallback_models: Optional[List[str]] = None,
         temperature: float = 0.5,
         timeout: float = 25.0,
         guardrails_mode: str = "enforce",
@@ -119,15 +305,16 @@ class LLMService:
         client: Optional[AsyncOpenAI] = None,
     ) -> None:
         self.model = model
+        self.fallback_models = fallback_models or []
         self.temperature = temperature
         self.timeout = timeout
         self.guardrails_mode = guardrails_mode
         self.storage = storage
-        self.client = client or AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self.client = client or AsyncOpenAI(api_key=api_key, base_url=base_url, max_retries=0)
 
     async def _call_llm_with_retry(self, **kwargs: Any) -> Any:
         attempts = 0
-        max_retries = 2
+        max_retries = 1
         last_error = None
         while attempts <= max_retries:
             try:
@@ -140,6 +327,10 @@ class LLMService:
                 err_str = str(exc)
                 if any(code in err_str for code in ("401", "402", "invalid_api_key")):
                     logger.error("LLM fatal auth/billing error (no retry): %s", exc)
+                    raise
+                # 503 Service Unavailable: immediately raise so caller can try fallback models
+                if "503" in err_str or "service_unavailable" in err_str.lower():
+                    logger.warning("Model '%s' is busy (503). Fast failover...", kwargs.get("model"))
                     raise
                 attempts += 1
                 if attempts <= max_retries:
@@ -176,16 +367,32 @@ class LLMService:
         else:
             messages.append({"role": "user", "content": user_message})
 
-        try:
-            response = await self._call_llm_with_retry(
-                model=self.model,
-                temperature=self.temperature,
-                messages=messages,
-                tools=[SUBMIT_LEAD_TOOL, REPORT_KNOWLEDGE_GAP_TOOL],
-                tool_choice="auto",
-            )
-        except Exception as exc:
-            logger.error("LLM service unavailable for %s:%s - %s", channel, chat_id, exc)
+        candidate_models = [self.model]
+        for fb in self.fallback_models:
+            if fb and fb not in candidate_models:
+                candidate_models.append(fb)
+
+        response = None
+        used_model = self.model
+
+        for cand in candidate_models:
+            try:
+                response = await self._call_llm_with_retry(
+                    model=cand,
+                    temperature=self.temperature,
+                    messages=messages,
+                    tools=[SUBMIT_LEAD_TOOL, REPORT_KNOWLEDGE_GAP_TOOL],
+                    tool_choice="auto",
+                )
+                if response:
+                    used_model = cand
+                    break
+            except Exception as exc:
+                logger.warning("LLM model '%s' failed for %s:%s - %s", cand, channel, chat_id, exc)
+                continue
+
+        if response is None:
+            logger.error("All LLM models failed for %s:%s - falling back to contextual offline rules", channel, chat_id)
             fallback_phone = extract_phone_fallback(user_message)
             if fallback_phone:
                 fallback_lead = LeadInfo(
@@ -204,10 +411,7 @@ class LLMService:
                 )
                 return LLMReply(text=safe_text, lead=fallback_lead)
 
-            safe_text = (
-                f"Добрый день! Подскажите, какой у вас автомобиль и что планируете сделать? "
-                f"Сориентирую по ценам или передам мастеру в бокс{(' — ответит ' + company.media_reply_promise) if company.media_reply_promise else ''}."
-            )
+            safe_text = build_contextual_fallback(user_message, company)
             return LLMReply(text=safe_text)
 
         choice = response.choices[0].message
@@ -287,7 +491,7 @@ class LLMService:
 
             try:
                 followup = await self._call_llm_with_retry(
-                    model=self.model,
+                    model=used_model,
                     temperature=self.temperature,
                     messages=tool_messages,
                 )

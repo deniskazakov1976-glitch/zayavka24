@@ -307,8 +307,14 @@ def build_telegram_router(
                     await _send_wow_effect(callback.message, reply.lead, demo_company)
             except Exception as exc:
                 logger.exception("Demo LLM error: %s", exc)
+                from app.llm import build_contextual_fallback
+                fallback_text = build_contextual_fallback(user_q, demo_company)
+                storage.add_message("telegram", chat_id, "user", user_q)
+                storage.add_message("telegram", chat_id, "assistant", fallback_text)
                 await callback.message.answer(
-                    "Секунду, ИИ-мастер обрабатывает запрос. Попробуйте ещё раз.",
+                    f"<i>Вы (как клиент):</i> {html.escape(user_q)}\n\n"
+                    f"🤖 <b>Бот-ассистент:</b>\n{html.escape(fallback_text)}",
+                    parse_mode="HTML",
                     reply_markup=_after_query_keyboard(),
                 )
             return
@@ -818,9 +824,18 @@ def build_telegram_router(
             )
         except Exception as exc:
             logger.exception("LLM error for telegram chat %s: %s", chat_id, exc)
-            await message.answer(
-                "Секунду, уточняю информацию по базе. Напишите, пожалуйста, ещё раз через минуту."
-            )
+            from app.llm import build_contextual_fallback
+            fallback_text = build_contextual_fallback(text, company)
+            storage.add_message("telegram", chat_id, "user", text)
+            storage.add_message("telegram", chat_id, "assistant", fallback_text)
+            if is_platform and (is_demo_session or slug == "demo_detailing"):
+                await message.answer(
+                    f"🤖 <b>Бот-ассистент:</b>\n{html.escape(fallback_text)}",
+                    parse_mode="HTML",
+                    reply_markup=_after_query_keyboard(),
+                )
+            else:
+                await message.answer(fallback_text)
             return
 
         storage.add_message("telegram", chat_id, "user", text)
