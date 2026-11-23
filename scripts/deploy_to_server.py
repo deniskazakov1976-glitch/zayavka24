@@ -12,12 +12,25 @@ REMOTE_DIR = "/opt/BotAvitoTelegram"
 
 
 def make_tarball(source_dir: Path) -> Path:
-    """Creates a temporary tarball of the project excluding venv/cache/data."""
+    """Creates a temporary tarball of the project excluding venv/cache/data/videos."""
     tar_path = Path(tempfile.gettempdir()) / "bot_deploy.tar.gz"
     with tarfile.open(tar_path, "w:gz") as tar:
         for root, dirs, files in os.walk(source_dir):
-            # Exclude runtime folders
-            dirs[:] = [d for d in dirs if d not in (".venv", ".pytest_cache", "__pycache__", ".git", "backups")]
+            # Exclude runtime and heavy media folders
+            dirs[:] = [
+                d for d in dirs
+                if d not in (
+                    ".venv",
+                    ".pytest_cache",
+                    "__pycache__",
+                    ".git",
+                    "backups",
+                    "data",
+                    "video_motion_promo",
+                    "video_explainer",
+                    "video_explainer_v2",
+                )
+            ]
             for file in files:
                 if file.endswith((".pyc", ".pyo")):
                     continue
@@ -27,11 +40,25 @@ def make_tarball(source_dir: Path) -> Path:
     return tar_path
 
 
-def deploy(root_password: str) -> None:
+def deploy(root_password: str = None, key_path: str = None) -> None:
     print(f"[*] Подключение по SSH к root@{SERVER_IP}...")
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(SERVER_IP, username="root", password=root_password, timeout=15)
+
+    if key_path and Path(key_path).exists():
+        print(f"[*] Использование приватного SSH-ключа: {key_path}")
+        ssh.connect(SERVER_IP, username="root", key_filename=key_path, timeout=15)
+    elif root_password:
+        ssh.connect(SERVER_IP, username="root", password=root_password, timeout=15)
+    else:
+        # Check standard default key
+        default_key = Path(os.environ.get("USERPROFILE", "")) / ".ssh" / "id_vps_aeza"
+        if default_key.exists():
+            print(f"[*] Найден ключ {default_key}, подключение...")
+            ssh.connect(SERVER_IP, username="root", key_filename=str(default_key), timeout=15)
+        else:
+            raise ValueError("Необходимо указать пароль или путь к SSH-ключу.")
+
     print("[+] Успешное SSH-подключение!")
 
     def run_cmd(cmd: str, check: bool = True) -> str:
@@ -118,7 +145,5 @@ def deploy(root_password: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Использование: python scripts/deploy_to_server.py <ROOT_PASSWORD>")
-        sys.exit(1)
-    deploy(sys.argv[1])
+    pwd = sys.argv[1] if len(sys.argv) > 1 else None
+    deploy(root_password=pwd)
