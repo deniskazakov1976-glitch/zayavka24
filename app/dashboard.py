@@ -184,6 +184,7 @@ def build_dashboard_router(
     auth: Optional[AuthService] = None,
     bot_manager: Optional[Any] = None,
     llm: Optional[Any] = None,
+    notifier: Optional[Any] = None,
 ) -> APIRouter:
     router = APIRouter()
     auth_service = auth or AuthService(settings, storage)
@@ -1106,9 +1107,9 @@ def build_dashboard_router(
 
         from app.models import LeadInfo
         lead = LeadInfo(
-            channel="telegram",
+            channel="web",
             chat_id=f"web_{int(now)}",
-            company_slug="detailing_premium",
+            company_slug="default",
             client_name=req.name.strip() or "Заявка с сайта",
             phone=req.phone.strip(),
             car_model="",
@@ -1119,6 +1120,18 @@ def build_dashboard_router(
         )
         try:
             storage.save_lead(lead)
+            if notifier:
+                try:
+                    await notifier.notify_saas_trial_request(
+                        user_label=lead.client_name,
+                        chat_id=lead.chat_id,
+                        city_name="Веб-сайт (форма)",
+                        niche=lead.service_interest,
+                        price_hint="Заявка с сайта",
+                        owner_phone=lead.phone,
+                    )
+                except Exception as ne:
+                    logger.warning("Could not send telegram notification for landing lead: %s", ne)
         except Exception as exc:
             logger.warning("Could not persist landing lead: %s", exc)
 

@@ -65,7 +65,7 @@ class ConversationMessage(BaseModel):
 
 
 class LeadInfo(BaseModel):
-    channel: Literal["telegram", "avito", "whatsapp"]
+    channel: Literal["telegram", "avito", "whatsapp", "web"]
     chat_id: str
     company_slug: str
     client_name: str = ""

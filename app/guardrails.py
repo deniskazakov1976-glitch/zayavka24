@@ -30,8 +30,8 @@ def _extract_numbers(text: str) -> Set[int]:
         except ValueError:
             pass
 
-    # Match abbreviations like 45к, 15 тыс
-    for match in re.finditer(r"(\d+)\s*(?:к|k|тыс)", cleaned, re.IGNORECASE):
+    # Match abbreviations like 45к, 15 тыс (excluding mileage "150 тыс км")
+    for match in re.finditer(r"(\d+)\s*(?:к|k|тыс)(?![\s\.\-]*(?:км|километр|миль))", cleaned, re.IGNORECASE):
         try:
             val = int(match.group(1)) * 1000
             numbers.add(val)
@@ -115,14 +115,30 @@ def validate_reply(
     cleaned_reply = clean_humanize_artifacts(reply_text)
     allowed_numbers = extract_allowed_numbers(company)
 
-    # Detect numbers that look like prices (> 500) or discounts (e.g. 50%)
-    price_pattern = re.compile(
-        r"(\d[\d\s]*\d|\d+)\s*(?:₽|руб|р\b|тыс|к\b|процент|%)",
-        re.IGNORECASE,
-    )
-
     violations = []
     cleaned_reply_for_prices = re.sub(r"(\d)\s+(\d)", r"\1\2", cleaned_reply)
+
+    # 1. Detect price ranges: "от 5 000 до 15 000 руб"
+    range_pattern = re.compile(
+        r"от\s+(\d[\d\s]*\d|\d+)\s*до\s*(\d[\d\s]*\d|\d+)\s*(?:₽|руб|р\b|тыс|к\b)",
+        re.IGNORECASE,
+    )
+    for rm in range_pattern.finditer(cleaned_reply_for_prices):
+        unit = rm.group(0).lower()
+        multiplier = 1000 if any(k in unit for k in ("тыс", "к")) else 1
+        for g in (1, 2):
+            try:
+                val = int(rm.group(g).replace(" ", "")) * multiplier
+                if val > 100 and val not in allowed_numbers:
+                    violations.append(f"Выдуманная цена диапазона: {rm.group(g).strip()}")
+            except ValueError:
+                pass
+
+    # 2. Detect single prices or discounts (excluding mileage like "150 тыс км")
+    price_pattern = re.compile(
+        r"(\d[\d\s]*\d|\d+)\s*(?:₽|руб(?:лей|ля|\.|\b)?|р\b|тыс(?:\.|\b)(?![\s\.\-]*(?:км|километр|миль))|к\b(?![\s\.\-]*(?:км|километр|миль))|процент(?:ов|а)?|%)",
+        re.IGNORECASE,
+    )
     for m in price_pattern.finditer(cleaned_reply_for_prices):
         match_str = m.group(1)
         full_match = m.group(0).lower()

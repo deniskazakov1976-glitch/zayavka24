@@ -4,7 +4,7 @@ import sqlite3
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from app.models import ConversationMessage, KnowledgeGap, LeadInfo
 
@@ -35,8 +35,8 @@ def _scope(company_slugs: Optional[List[str]], column: str = "company_slug") -> 
 class Storage:
     """Lightweight SQLite persistence with WAL mode, migrations, and multi-tenant tables."""
 
-    def __init__(self, db_path: Path) -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: Path | str) -> None:
+        self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._price_cache: Dict[str, tuple[float, float, float]] = {}
         self._init_db()
@@ -759,7 +759,10 @@ class Storage:
     def list_knowledge_gaps(
         self, limit: int = 50, status: Optional[str] = None,
         company_slugs: Optional[List[str]] = None,
+        company_slug: Optional[str] = None,
     ) -> List[KnowledgeGap]:
+        if company_slug and not company_slugs:
+            company_slugs = [company_slug]
         clause, params = _scope(company_slugs)
         status_clause = " AND status = ?" if status else ""
         status_params: tuple = (status,) if status else ()
@@ -1039,22 +1042,55 @@ class Storage:
         return {"deleted_events": c1, "deleted_echo_records": c2}
 
     # === 152-FZ Privacy & Data Retention (P11 / TZ 4) ===
-    def delete_subject_data(self, target: str) -> int:
-        """Удаляет все персональные данные субъекта (по chat_id или по номеру телефона)."""
+    def delete_subject_data(self, target: str, company_slugs: Optional[Sequence[str]] = None) -> int:
+        """Удаляет все персональные данные субъекта (по chat_id или по номеру телефона).
+        Если указан company_slugs, удаление ограничивается компаниями данного тенанта.
+        """
         target_clean = target.strip()
         total_deleted = 0
         with self._connect() as conn:
-            # 1. Удаление лидов по телефону или chat_id
-            c1 = conn.execute(
-                "DELETE FROM leads WHERE chat_id = ? OR phone LIKE ?",
-                (target_clean, f"%{target_clean}%"),
-            ).rowcount
-            # 2. Удаление сообщений по chat_id
-            c2 = conn.execute("DELETE FROM messages WHERE chat_id = ?", (target_clean,)).rowcount
-            # 3. Удаление сессий
-            c3 = conn.execute("DELETE FROM sessions WHERE chat_id = ?", (target_clean,)).rowcount
-            # 4. Удаление пробелов знаний по chat_id
-            c4 = conn.execute("DELETE FROM knowledge_gaps WHERE chat_id = ?", (target_clean,)).rowcount
+            if company_slugs:
+                slug_list = list(company_slugs)
+                placeholders = ",".join("?" for _ in slug_list)
+                # 1. Удаление лидов по телефону или chat_id в рамках компаний тенанта
+                c1 = conn.execute(
+                    f"DELETE FROM leads WHERE (chat_id = ? OR phone LIKE ?) AND company_slug IN ({placeholders})",
+                    (target_clean, f"%{target_clean}%", *slug_list),
+                ).rowcount
+                # 2. Удаление сообщений по chat_id для сессий или лидов этих компаний
+                c2 = conn.execute(
+                    f"""
+                    DELETE FROM messages 
+                    WHERE chat_id = ? 
+                      AND (
+                          chat_id IN (SELECT chat_id FROM sessions WHERE company_slug IN ({placeholders}))
+                          OR chat_id IN (SELECT chat_id FROM leads WHERE company_slug IN ({placeholders}))
+                      )
+                    """,
+                    (target_clean, *slug_list, *slug_list),
+                ).rowcount
+                # 3. Удаление сессий
+                c3 = conn.execute(
+                    f"DELETE FROM sessions WHERE chat_id = ? AND company_slug IN ({placeholders})",
+                    (target_clean, *slug_list),
+                ).rowcount
+                # 4. Удаление пробелов знаний
+                c4 = conn.execute(
+                    f"DELETE FROM knowledge_gaps WHERE chat_id = ? AND company_slug IN ({placeholders})",
+                    (target_clean, *slug_list),
+                ).rowcount
+            else:
+                # 1. Удаление лидов по телефону или chat_id
+                c1 = conn.execute(
+                    "DELETE FROM leads WHERE chat_id = ? OR phone LIKE ?",
+                    (target_clean, f"%{target_clean}%"),
+                ).rowcount
+                # 2. Удаление сообщений по chat_id
+                c2 = conn.execute("DELETE FROM messages WHERE chat_id = ?", (target_clean,)).rowcount
+                # 3. Удаление сессий
+                c3 = conn.execute("DELETE FROM sessions WHERE chat_id = ?", (target_clean,)).rowcount
+                # 4. Удаление пробелов знаний по chat_id
+                c4 = conn.execute("DELETE FROM knowledge_gaps WHERE chat_id = ?", (target_clean,)).rowcount
             total_deleted = c1 + c2 + c3 + c4
         return total_deleted
 

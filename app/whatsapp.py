@@ -121,6 +121,9 @@ class WhatsAppWebhookHandler:
         if not chat_id:
             return {"status": "ignored", "reason": "no_chat_id"}
 
+        # Ensure session exists with active company attribution
+        self.storage.upsert_session("whatsapp", chat_id, company.slug)
+
         # 2. Human owner reply detection -> Auto-pause
         # If typeWebhook is outgoingMessageReceived, the salon owner wrote from their phone app
         if type_webhook in ("outgoingMessageReceived", "outgoingAPIMessageReceived"):
@@ -165,9 +168,12 @@ class WhatsAppWebhookHandler:
             )
             # Record user media stub in history
             self.storage.add_message("whatsapp", chat_id, "user", f"[{media_kind.upper()}]")
-            # Send reply
-            await wa_client.send_message(chat_id, reply_text)
-            self.storage.record_bot_sent_message("whatsapp", chat_id, text=reply_text)
+            # Pre-record pending echo to defeat race conditions (K4)
+            rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=reply_text, status="pending")
+            sent_res = await wa_client.send_message(chat_id, reply_text)
+            sent_id = str(sent_res.get("idMessage") or "")
+            if sent_id:
+                self.storage.update_bot_sent_message_id(rec_id, sent_id)
             self.storage.add_message("whatsapp", chat_id, "assistant", reply_text)
 
             if event_id:
@@ -184,8 +190,7 @@ class WhatsAppWebhookHandler:
         if not incoming_text:
             return {"status": "ignored", "reason": "empty_text"}
 
-        # Add incoming message
-        self.storage.add_message("whatsapp", chat_id, "user", incoming_text)
+        # Fetch history BEFORE appending current message so prompt does not duplicate user message
         history_msgs = self.storage.get_history("whatsapp", chat_id, limit=12)
 
         # Quota check
@@ -195,8 +200,21 @@ class WhatsAppWebhookHandler:
             if not q_status.allowed:
                 logger.warning("Quota exceeded for tenant '%s' in WhatsApp chat %s", t_slug, chat_id)
                 fallback = "Передал ваш запрос менеджеру, он свяжется с вами."
-                await wa_client.send_message(chat_id, fallback)
+                self.storage.add_message("whatsapp", chat_id, "user", incoming_text)
                 self.storage.add_message("whatsapp", chat_id, "assistant", fallback)
+                self.storage.record_guard_event(
+                    channel="whatsapp",
+                    chat_id=chat_id,
+                    company_slug=company.slug,
+                    original_reply="<quota_blocked>",
+                    safe_reply=fallback,
+                    blocked_terms="quota",
+                )
+                rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=fallback, status="pending")
+                sent_res = await wa_client.send_message(chat_id, fallback)
+                sent_id = str(sent_res.get("idMessage") or "")
+                if sent_id:
+                    self.storage.update_bot_sent_message_id(rec_id, sent_id)
                 if event_id:
                     self.storage.mark_event_processed("whatsapp", event_id, "quota_blocked")
                 return {"status": "quota_blocked"}
@@ -213,10 +231,15 @@ class WhatsAppWebhookHandler:
 
         final_text = llm_reply.text
 
-        # Send reply
-        await wa_client.send_message(chat_id, final_text)
-        self.storage.record_bot_sent_message("whatsapp", chat_id, text=final_text)
+        # Record messages and pre-record pending echo
+        self.storage.add_message("whatsapp", chat_id, "user", incoming_text)
         self.storage.add_message("whatsapp", chat_id, "assistant", final_text)
+
+        rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=final_text, status="pending")
+        sent_res = await wa_client.send_message(chat_id, final_text)
+        sent_id = str(sent_res.get("idMessage") or "")
+        if sent_id:
+            self.storage.update_bot_sent_message_id(rec_id, sent_id)
 
         # 6. Lead Capture with deduplication check
         if llm_reply.lead:
@@ -235,6 +258,11 @@ class WhatsAppWebhookHandler:
             if lead.phone and not self.storage.has_lead("whatsapp", chat_id, lead.phone):
                 self.storage.save_lead(lead)
                 await self.notifier.notify(lead, company)
+
+        gap = getattr(llm_reply, "knowledge_gap", None)
+        if gap:
+            self.storage.save_knowledge_gap(gap)
+            await self.notifier.notify_knowledge_gap(gap, company)
 
         if event_id:
             self.storage.mark_event_processed("whatsapp", event_id, "replied")

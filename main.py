@@ -153,6 +153,7 @@ async def run() -> None:
             bot_manager=bot_manager,
             llm=llm,
             whatsapp_handler=whatsapp_handler,
+            notifier=notifier,
         )
         config = uvicorn.Config(
             server_app,

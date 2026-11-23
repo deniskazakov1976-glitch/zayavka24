@@ -219,12 +219,14 @@ class BotManager:
             if tenant and tenant.get("status") == "active":
                 await self._start_tenant(tenant)
 
-    async def stop_tenant(self, tenant_slug: str) -> None:
+    async def stop_tenant(self, tenant_slug: str) -> bool:
         """Останавливает и выгружает рантайм конкретного тенанта."""
-        async with self._lock:
+        async with self._start_lock:
             old = self._runtimes.pop(tenant_slug, None)
             if old:
                 await self._stop_runtime(old)
+                return True
+            return False
 
     async def _stop_runtime(self, runtime: TenantRuntime) -> None:
         if runtime.task and not runtime.task.done():

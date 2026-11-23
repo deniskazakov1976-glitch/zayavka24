@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import html
+import io
 import logging
 import time
 from collections import defaultdict, deque
@@ -451,9 +453,14 @@ def build_telegram_router(
         channel = "avito" if not target.lstrip("-").isdigit() else "telegram"
         if tenant_slug and tenant_slug != "default":
             allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
-            session_comp = storage.get_session_company(channel, target)
-            if session_comp and session_comp not in allowed:
-                await message.answer("⛔ Доступ ограничен: данный диалог принадлежит другой компании.")
+            session_comp = (
+                storage.get_session_company(channel, target)
+                or storage.get_session_company("avito", target)
+                or storage.get_session_company("whatsapp", target)
+                or storage.get_session_company("telegram", target)
+            )
+            if not session_comp or session_comp not in allowed:
+                await message.answer("⛔ Доступ ограничен: данный диалог не принадлежит вашей компании.")
                 return
         storage.pause_session(channel, target, hours=settings.avito_manual_pause_hours)
         await message.answer(
@@ -471,9 +478,14 @@ def build_telegram_router(
         channel = "avito" if not target.lstrip("-").isdigit() else "telegram"
         if tenant_slug and tenant_slug != "default":
             allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
-            session_comp = storage.get_session_company(channel, target)
-            if session_comp and session_comp not in allowed:
-                await message.answer("⛔ Доступ ограничен: данный диалог принадлежит другой компании.")
+            session_comp = (
+                storage.get_session_company(channel, target)
+                or storage.get_session_company("avito", target)
+                or storage.get_session_company("whatsapp", target)
+                or storage.get_session_company("telegram", target)
+            )
+            if not session_comp or session_comp not in allowed:
+                await message.answer("⛔ Доступ ограничен: данный диалог не принадлежит вашей компании.")
                 return
         storage.resume_session(channel, target)
         await message.answer(f"Бот снова активен для {channel}:{target}.")
@@ -482,22 +494,26 @@ def build_telegram_router(
     async def cmd_forget(message: Message, command: CommandObject) -> None:
         chat_id = str(message.chat.id)
         target = (command.args or "").strip()
+        tenant_slugs = (
+            [p.slug for p in company_store.list_for_tenant(tenant_slug)]
+            if (tenant_slug and tenant_slug != "default")
+            else None
+        )
         if target and is_admin(message):
-            if tenant_slug and tenant_slug != "default":
-                allowed = {p.slug for p in company_store.list_for_tenant(tenant_slug)}
+            if tenant_slugs:
                 session_comp = (
                     storage.get_session_company("telegram", target)
                     or storage.get_session_company("avito", target)
                     or storage.get_session_company("whatsapp", target)
                 )
-                if session_comp and session_comp not in allowed:
+                if session_comp and session_comp not in set(tenant_slugs):
                     await message.answer("⛔ Доступ ограничен: данный субъект принадлежит другой компании.")
                     return
-            del_cnt = storage.delete_subject_data(target)
+            del_cnt = storage.delete_subject_data(target, company_slugs=tenant_slugs)
             await message.answer(f"152-ФЗ: Данные субъекта «{target}» удалены ({del_cnt} записей).")
         else:
             storage.clear_history("telegram", chat_id)
-            del_cnt = storage.delete_subject_data(chat_id)
+            del_cnt = storage.delete_subject_data(chat_id, company_slugs=tenant_slugs)
             await message.answer(
                 "🔒 Ваша история диалога и персональные данные полностью удалены в соответствии со 152-ФЗ."
             )
@@ -545,7 +561,14 @@ def build_telegram_router(
                     photo_size = message.photo[-1]
                     file_info = await bot.get_file(photo_size.file_id)
                     if file_info.file_path:
-                        photo_url = f"https://api.telegram.org/file/bot{bot.token}/{file_info.file_path}"
+                        photo_data_uri = None
+                        try:
+                            buf = io.BytesIO()
+                            await bot.download_file(file_info.file_path, destination=buf)
+                            encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
+                            photo_data_uri = f"data:image/jpeg;base64,{encoded}"
+                        except Exception as e:
+                            logger.warning("Failed to download telegram photo: %s", e)
                         history = storage.get_history("telegram", chat_id, limit=settings.max_history_messages)
                         caption = (message.caption or "").strip()
                         user_prompt = caption or "Оцените повреждение или объём работ по прикреплённой фотографии автомобиля."
@@ -555,7 +578,7 @@ def build_telegram_router(
                             user_message=user_prompt,
                             channel="telegram",
                             chat_id=chat_id,
-                            image_url=photo_url,
+                            image_url=photo_data_uri,
                         )
                         storage.add_message("telegram", chat_id, "user", f"[фото] {caption}".strip())
                         storage.add_message("telegram", chat_id, "assistant", reply.text)
@@ -623,8 +646,9 @@ def build_telegram_router(
         if storage.is_paused("telegram", chat_id):
             return
 
-        # --- SaaS-онбординг: 4-шаговый мастер заявки на тест-драйв ---
-        if chat_id in _saas_wizard:
+        # --- SaaS-онбординг: 4-шаговый мастер заявки на тест-драйв (только платформа) ---
+        is_platform = (tenant_slug is None or tenant_slug == "default")
+        if is_platform and chat_id in _saas_wizard:
             if text.lower() in ("отмена", "cancel", "меню", "назад", "/cancel", "/menu"):
                 _saas_wizard.pop(chat_id, None)
                 await message.answer(
@@ -712,22 +736,37 @@ def build_telegram_router(
             return
 
         slug = storage.get_session_company("telegram", chat_id)
-        is_demo_session = (slug in (_PLATFORM_DEMO_SLUG, "demo_detailing") or not slug)
+        is_demo_session = is_platform and (slug in (_PLATFORM_DEMO_SLUG, "demo_detailing") or not slug)
 
-        # Если пользователь в demo-режиме и пишет текст (не кнопку) — переключаем на demo_detailing
-        if slug == _PLATFORM_DEMO_SLUG or not slug:
+        # Если бот платформенный и пользователь в demo-режиме (или без slug) — переключаем на demo_detailing
+        if is_platform and (slug == _PLATFORM_DEMO_SLUG or not slug):
             demo_company = resolve_company("demo_detailing") or resolve_company(None)
             if demo_company:
                 slug = demo_company.slug
                 storage.upsert_session("telegram", chat_id, slug)
                 storage.resume_session("telegram", chat_id)
+        elif not is_platform and not slug:
+            tenant_companies = company_store.list_for_tenant(tenant_slug) if hasattr(company_store, "list_for_tenant") else []
+            if tenant_companies:
+                slug = tenant_companies[0].slug
+                storage.upsert_session("telegram", chat_id, slug)
+                storage.resume_session("telegram", chat_id)
+            else:
+                comp = resolve_company(None)
+                if comp:
+                    slug = comp.slug
+                    storage.upsert_session("telegram", chat_id, slug)
+                    storage.resume_session("telegram", chat_id)
 
         company = resolve_company(slug)
         if not company:
-            await message.answer(
-                "👋 Введите /start для начала.",
-                reply_markup=_platform_menu_keyboard(),
-            )
+            if is_platform:
+                await message.answer(
+                    "👋 Введите /start для начала.",
+                    reply_markup=_platform_menu_keyboard(),
+                )
+            else:
+                await message.answer("Здравствуйте! Чем могу вам помочь?")
             return
 
         storage.upsert_session("telegram", chat_id, company.slug)
@@ -787,7 +826,7 @@ def build_telegram_router(
         storage.add_message("telegram", chat_id, "user", text)
         storage.add_message("telegram", chat_id, "assistant", reply.text)
 
-        if is_demo_session or slug == "demo_detailing":
+        if is_platform and (is_demo_session or slug == "demo_detailing"):
             await message.answer(
                 f"🤖 <b>Бот-ассистент:</b>\n{html.escape(reply.text)}",
                 parse_mode="HTML",
@@ -799,10 +838,11 @@ def build_telegram_router(
         if reply.lead and not storage.has_lead("telegram", chat_id, reply.lead.phone):
             storage.save_lead(reply.lead)
             await notifier.notify(reply.lead, company)
-            # ВАУ-эффект: если пользователь пришёл с лендинга (demo-режим), показываем карточку
-            orig_slug = storage.get_session_company("telegram", chat_id)
-            if orig_slug in (_PLATFORM_DEMO_SLUG, "demo_detailing"):
-                await _send_wow_effect(message, reply.lead, company)
+            # ВАУ-эффект: только для платформенного бота в демо-режиме
+            if is_platform:
+                orig_slug = storage.get_session_company("telegram", chat_id)
+                if orig_slug in (_PLATFORM_DEMO_SLUG, "demo_detailing"):
+                    await _send_wow_effect(message, reply.lead, company)
 
         gap = getattr(reply, "knowledge_gap", None)
         if gap:

@@ -23,6 +23,7 @@ def create_app(
     bot_manager: Optional[Any] = None,
     llm: Optional[Any] = None,
     whatsapp_handler: Optional[Any] = None,
+    notifier: Optional[Any] = None,
 ) -> FastAPI:
     app = FastAPI(title="Заявка 24/7 — Управление процессами и Вебхуки")
 
@@ -67,6 +68,8 @@ def create_app(
             if acc:
                 valid = True
                 company_slug = acc.get("company_slug")
+                payload["_company_slug"] = company_slug
+                payload["_avito_user_id"] = acc.get("user_id")
 
         if not valid:
             raise HTTPException(status_code=404, detail="Not Found")
@@ -118,6 +121,7 @@ def create_app(
             auth=auth,
             bot_manager=bot_manager,
             llm=llm,
+            notifier=notifier,
         )
         app.include_router(dashboard_router)
 

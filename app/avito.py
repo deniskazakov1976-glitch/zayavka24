@@ -107,8 +107,33 @@ class AvitoWebhookHandler:
         self.alert_manager = alert_manager
         self._bot_sent_message_ids: Set[str] = set()
         self._chat_locks: Dict[str, asyncio.Lock] = {}
+        self._client_cache: Dict[str, AvitoClient] = {}
         self.queue: asyncio.Queue = asyncio.Queue()
         self._worker_tasks: List[asyncio.Task] = []
+
+    def _get_client_for_account(self, company_slug: str, avito_user_id: Optional[int] = None) -> AvitoClient:
+        acc = None
+        if avito_user_id:
+            try:
+                acc = self.storage.get_avito_account_by_user_id(int(avito_user_id))
+            except (ValueError, TypeError):
+                pass
+        if not acc and company_slug:
+            accounts = self.storage.list_avito_accounts()
+            for a in accounts:
+                if a.get("company_slug") == company_slug and a.get("enabled"):
+                    acc = self.storage.get_avito_account_by_user_id(a["user_id"])
+                    break
+        if acc and acc.get("client_id") and acc.get("client_secret"):
+            c_key = f"{acc['client_id']}:{acc['user_id']}"
+            if c_key not in self._client_cache:
+                self._client_cache[c_key] = AvitoClient(
+                    client_id=acc["client_id"],
+                    client_secret=acc["client_secret"],
+                    user_id=int(acc["user_id"]),
+                )
+            return self._client_cache[c_key]
+        return self.avito_client
 
     def _get_chat_lock(self, chat_id: str) -> asyncio.Lock:
         if chat_id not in self._chat_locks:
@@ -166,7 +191,8 @@ class AvitoWebhookHandler:
                 self.storage.mark_event_processed("avito", message_id, status="processing")
 
             # K4: Persistent echo check
-            if author_id == self.avito_client.user_id:
+            bot_user_id = getattr(self.avito_client, "user_id", None)
+            if bot_user_id is not None and author_id == bot_user_id:
                 if message_id and message_id in self._bot_sent_message_ids:
                     self._bot_sent_message_ids.discard(message_id)
                     return {"status": "ignored", "reason": "bot_echo"}
@@ -203,6 +229,15 @@ class AvitoWebhookHandler:
 
             self.storage.upsert_session("avito", chat_id, company.slug)
 
+            user_id_raw = value.get("user_id") or payload.get("_avito_user_id")
+            business_user_id: Optional[int] = None
+            if user_id_raw is not None:
+                try:
+                    business_user_id = int(user_id_raw)
+                except (ValueError, TypeError):
+                    business_user_id = None
+            active_client = self._get_client_for_account(company.slug, avito_user_id=business_user_id)
+
             # Quota check (Block B: TZ B3) — проверяем ДО вызова генерации для текста и медиа
             if self.quota_service:
                 t_slug = getattr(company, "tenant_slug", None) or "default"
@@ -216,13 +251,26 @@ class AvitoWebhookHandler:
                         channel="avito",
                         chat_id=chat_id,
                         company_slug=company.slug,
-                        event_type="quota_block",
-                        detail=q_status.reason or "Лимит сообщений тарифа исчерпан",
+                        original_reply="<quota_blocked>",
+                        safe_reply=fallback_reply,
+                        blocked_terms="quota",
                     )
-                    await self.avito_client.send_message(chat_id, fallback_reply)
+                    rec_id = self.storage.record_bot_sent_message("avito", chat_id, text=fallback_reply, status="pending")
+                    sent = await active_client.send_message(chat_id, fallback_reply)
+                    sent_id = str(sent.get("id", ""))
+                    if sent_id:
+                        self._bot_sent_message_ids.add(sent_id)
+                        self.storage.update_bot_sent_message_id(rec_id, sent_id)
                     if message_id:
                         self.storage.mark_event_processed("avito", message_id, status="done")
-                    return {"status": "quota_exceeded"}
+                    return {"status": "quota_blocked"}
+
+                if q_status.soft_limit and self.alert_manager:
+                    await self.alert_manager.send_alert(
+                        f"quota_soft_{t_slug}",
+                        f"⚠️ Внимание: клиент *{t_slug}* израсходовал более 80% лимита тарифа "
+                        f"({q_status.used_messages}/{q_status.limit_messages} сообщений).",
+                    )
 
             if is_media:
                 has_phone = self.storage.has_lead_for_chat("avito", chat_id)
@@ -257,7 +305,7 @@ class AvitoWebhookHandler:
                         self.storage.add_message("avito", chat_id, "user", "[фото]")
                         self.storage.add_message("avito", chat_id, "assistant", reply_text)
                         rec_id = self.storage.record_bot_sent_message("avito", chat_id, text=reply_text, status="pending")
-                        sent = await self.avito_client.send_message(chat_id, reply_text)
+                        sent = await active_client.send_message(chat_id, reply_text)
                         sent_id = str(sent.get("id", ""))
                         if sent_id:
                             self._bot_sent_message_ids.add(sent_id)
@@ -277,7 +325,7 @@ class AvitoWebhookHandler:
 
                 # Pre-record pending echo to defeat race conditions (K4)
                 rec_id = self.storage.record_bot_sent_message("avito", chat_id, text=media_reply, status="pending")
-                sent = await self.avito_client.send_message(chat_id, media_reply)
+                sent = await active_client.send_message(chat_id, media_reply)
                 sent_id = str(sent.get("id", ""))
                 if sent_id:
                     self._bot_sent_message_ids.add(sent_id)
@@ -288,40 +336,6 @@ class AvitoWebhookHandler:
 
             history = self.storage.get_history("avito", chat_id, limit=self.max_history_messages)
             avito_chat_url = f"https://www.avito.ru/profile/messenger/channel/{chat_id}"
-
-            # Quota check (Block B: TZ B3)
-            if self.quota_service:
-                t_slug = getattr(company, "tenant_slug", None) or "default"
-                q_status = self.quota_service.check(t_slug)
-                if not q_status.allowed:
-                    logger.warning("Quota exceeded for tenant '%s' in Avito chat %s: %s", t_slug, chat_id, q_status.reason)
-                    fallback_reply = "Передал ваш запрос менеджеру, он свяжется с вами."
-                    self.storage.add_message("avito", chat_id, "user", text)
-                    self.storage.add_message("avito", chat_id, "assistant", fallback_reply)
-                    self.storage.record_guard_event(
-                        channel="avito",
-                        chat_id=chat_id,
-                        company_slug=company.slug,
-                        original_reply="<quota_blocked>",
-                        safe_reply=fallback_reply,
-                        blocked_terms="quota",
-                    )
-                    rec_id = self.storage.record_bot_sent_message("avito", chat_id, text=fallback_reply, status="pending")
-                    sent = await self.avito_client.send_message(chat_id, fallback_reply)
-                    sent_id = str(sent.get("id", ""))
-                    if sent_id:
-                        self._bot_sent_message_ids.add(sent_id)
-                        self.storage.update_bot_sent_message_id(rec_id, sent_id)
-                    if message_id:
-                        self.storage.mark_event_processed("avito", message_id, status="done")
-                    return {"status": "quota_blocked"}
-
-                if q_status.soft_limit and self.alert_manager:
-                    await self.alert_manager.send_alert(
-                        f"quota_soft_{t_slug}",
-                        f"⚠️ Внимание: клиент *{t_slug}* израсходовал более 80% лимита тарифа "
-                        f"({q_status.used_messages}/{q_status.limit_messages} сообщений).",
-                    )
 
             reply = await self.llm.generate_reply(
                 company=company,
@@ -337,7 +351,7 @@ class AvitoWebhookHandler:
 
             # Pre-record pending echo (K4)
             rec_id = self.storage.record_bot_sent_message("avito", chat_id, text=reply.text, status="pending")
-            sent = await self.avito_client.send_message(chat_id, reply.text)
+            sent = await active_client.send_message(chat_id, reply.text)
             sent_id = str(sent.get("id", ""))
             if sent_id:
                 self._bot_sent_message_ids.add(sent_id)

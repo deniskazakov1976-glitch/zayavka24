@@ -694,7 +694,6 @@
     }
 
     async function saveStep(step) {
-      collectCurrentStepData();
       try {
         await fetch('/api/onboarding/step', {
           method: 'POST',
@@ -711,9 +710,9 @@
         if (!validateStep(currentStep)) return;
       }
       collectCurrentStepData();
+      saveStep(currentStep);
       currentStep = step;
       renderStep();
-      saveStep(currentStep);
     }
 
     function validateStep(step) {
@@ -735,20 +734,22 @@
 
     function nextStep() {
       if (!validateStep(currentStep)) return;
+      collectCurrentStepData();
+      saveStep(currentStep);
       if (currentStep === 5) {
         completeOnboarding();
         return;
       }
       currentStep++;
       renderStep();
-      saveStep(currentStep);
     }
 
     function prevStep() {
       if (currentStep > 1) {
+        collectCurrentStepData();
+        saveStep(currentStep);
         currentStep--;
         renderStep();
-        saveStep(currentStep);
       }
     }
 
