@@ -125,6 +125,10 @@ class AuthService:
         import time
 
         now = time.time()
+        if len(self._failed) > 500:
+            stale = [k for k, v in self._failed.items() if not v or (now - v[-1] >= 600)]
+            for k in stale:
+                self._failed.pop(k, None)
         attempts = [t for t in self._failed.get(client_ip, []) if now - t < 600]
         self._failed[client_ip] = attempts
         return len(attempts) >= 8

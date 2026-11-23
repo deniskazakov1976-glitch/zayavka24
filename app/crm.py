@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -23,29 +24,48 @@ class CRMDispatcher:
         self._client = client
 
     async def _get_client(self) -> httpx.AsyncClient:
-        if self._client and not self._client.is_closed:
+        if self._client and not getattr(self._client, "is_closed", False):
             return self._client
         return httpx.AsyncClient(timeout=self.timeout)
 
-    async def dispatch(self, lead: LeadInfo, company: Optional[CompanyProfile] = None) -> Dict[str, Any]:
-        """Dispatches a lead according to the company's CRM configuration."""
+    async def dispatch(
+        self,
+        lead: LeadInfo,
+        company: Optional[CompanyProfile] = None,
+        max_retries: int = 3,
+    ) -> Dict[str, Any]:
+        """Dispatches a lead according to the company's CRM configuration with automatic retry."""
         if not company or not company.crm_type or company.crm_type == "none":
             return {"status": "skipped", "reason": "crm_disabled"}
 
         crm_type = company.crm_type.lower().strip()
-        try:
-            if crm_type == "webhook":
-                return await self.send_webhook(lead, company)
-            elif crm_type == "amocrm":
-                return await self.send_amocrm(lead, company)
-            elif crm_type == "bitrix24":
-                return await self.send_bitrix24(lead, company)
-            else:
-                logger.warning("Unknown CRM type '%s' for company %s", crm_type, company.slug)
-                return {"status": "skipped", "reason": f"unknown_crm_type_{crm_type}"}
-        except Exception as exc:
-            logger.error("Failed to dispatch lead to CRM (%s) for %s: %s", crm_type, company.slug, exc)
-            return {"status": "error", "error": str(exc), "crm_type": crm_type}
+        last_res = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                if crm_type == "webhook":
+                    res = await self.send_webhook(lead, company)
+                elif crm_type == "amocrm":
+                    res = await self.send_amocrm(lead, company)
+                elif crm_type == "bitrix24":
+                    res = await self.send_bitrix24(lead, company)
+                else:
+                    logger.warning("Unknown CRM type '%s' for company %s", crm_type, company.slug)
+                    return {"status": "skipped", "reason": f"unknown_crm_type_{crm_type}"}
+
+                if res.get("status") == "ok":
+                    return res
+                last_res = res
+            except Exception as exc:
+                logger.warning(
+                    "CRM dispatch attempt %d/%d failed for %s (%s): %s",
+                    attempt, max_retries, company.slug, crm_type, exc
+                )
+                last_res = {"status": "error", "error": str(exc), "crm_type": crm_type}
+
+            if attempt < max_retries:
+                await asyncio.sleep(1.0 * attempt)
+
+        return last_res or {"status": "error", "error": "unknown_failure", "crm_type": crm_type}
 
     async def send_webhook(self, lead: LeadInfo, company: CompanyProfile) -> Dict[str, Any]:
         """Sends lead payload to an arbitrary HTTP/HTTPS webhook (Make, n8n, Zapier, custom CRM)."""
@@ -161,12 +181,42 @@ class CRMDispatcher:
         }
 
         client = await self._get_client()
+        lead_id = None
         try:
             resp = await client.post(api_url, json=payload, headers=headers)
             is_ok = 200 <= resp.status_code < 300
             if is_ok:
                 logger.info("Successfully pushed lead to amoCRM for %s (%s)", company.slug, subdomain)
-                return {"status": "ok", "provider": "amocrm", "http_code": resp.status_code}
+                try:
+                    if hasattr(resp, "json") and callable(resp.json):
+                        res_json = resp.json()
+                    else:
+                        res_json = json.loads(getattr(resp, "text", "") or "{}")
+                except Exception:
+                    res_json = {}
+
+                if isinstance(res_json, list) and len(res_json) > 0:
+                    lead_id = res_json[0].get("id")
+                elif isinstance(res_json, dict):
+                    embedded = res_json.get("_embedded") or {}
+                    leads = embedded.get("leads") or []
+                    if leads and isinstance(leads, list):
+                        lead_id = leads[0].get("id")
+
+                if lead_id and notes_text:
+                    try:
+                        notes_url = f"https://{subdomain}.amocrm.ru/api/v4/leads/{lead_id}/notes"
+                        notes_payload = [
+                            {
+                                "note_type": "common",
+                                "params": {"text": notes_text},
+                            }
+                        ]
+                        await client.post(notes_url, json=notes_payload, headers=headers)
+                    except Exception as n_err:
+                        logger.warning("Failed to attach notes to amoCRM lead %s: %s", company.slug, n_err)
+
+                return {"status": "ok", "provider": "amocrm", "http_code": resp.status_code, "lead_id": lead_id}
             else:
                 logger.warning("amoCRM returned code %d for %s: %s", resp.status_code, company.slug, resp.text[:200])
                 return {"status": "error", "provider": "amocrm", "http_code": resp.status_code, "response": resp.text[:200]}

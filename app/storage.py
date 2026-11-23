@@ -780,6 +780,18 @@ class Storage:
     def save_knowledge_gap(self, gap: KnowledgeGap) -> int:
         now = _utcnow().isoformat()
         with self._connect() as conn:
+            # Deduplicate: if an identical pending gap already exists for this company, return existing ID
+            existing = conn.execute(
+                """
+                SELECT id FROM knowledge_gaps
+                WHERE company_slug = ? AND status = 'pending' AND question = ?
+                ORDER BY id DESC LIMIT 1
+                """,
+                (gap.company_slug, gap.question),
+            ).fetchone()
+            if existing:
+                return int(existing["id"])
+
             cursor = conn.execute(
                 """
                 INSERT INTO knowledge_gaps (

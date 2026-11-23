@@ -56,13 +56,31 @@ class LeadNotifier:
         crm_dispatcher: Optional[CRMDispatcher] = None,
         bot_manager: Optional[object] = None,
         storage: Optional[object] = None,
+        alert_manager: Optional[object] = None,
     ) -> None:
         self.bot = bot
         self.default_chat_id = default_chat_id
         self.crm_dispatcher = crm_dispatcher or CRMDispatcher()
         self.bot_manager = bot_manager
         self.storage = storage
+        self.alert_manager = alert_manager
         self._background_tasks: set[asyncio.Task] = set()
+
+    async def _safe_crm_dispatch(self, lead: LeadInfo, company: CompanyProfile) -> None:
+        try:
+            res = await self.crm_dispatcher.dispatch(lead, company)
+            if res.get("status") == "error":
+                logger.warning("CRM dispatch failed for %s (%s): %s", company.slug, company.crm_type, res)
+                if self.alert_manager:
+                    err_msg = res.get("error") or res.get("reason") or res.get("response") or "unknown"
+                    await self.alert_manager.send_alert(
+                        f"crm_error_{company.slug}",
+                        f"⚠️ Ошибка отправки лида в CRM ({company.crm_type}) для «{company.company_name}»:\n"
+                        f"Клиент: {lead.phone} ({lead.client_name})\n"
+                        f"Ошибка: {err_msg}",
+                    )
+        except Exception as exc:
+            logger.exception("Unexpected error in CRM dispatch for %s: %s", company.slug, exc)
 
     def _resolve_bot_and_target(self, company: Optional[CompanyProfile] = None) -> tuple[Optional[Bot], Optional[int]]:
         tenant_slug = getattr(company, "tenant_slug", None) or "default"
@@ -96,9 +114,10 @@ class LeadNotifier:
         # 1. Asynchronously dispatch lead to external CRM if configured (amoCRM, Bitrix24, Webhook)
         if self.crm_dispatcher and company and company.crm_type and company.crm_type != "none":
             try:
-                task = asyncio.create_task(self.crm_dispatcher.dispatch(lead, company))
+                task = asyncio.create_task(self._safe_crm_dispatch(lead, company))
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
+                await asyncio.sleep(0)
             except Exception as crm_err:
                 logger.warning("Failed to schedule CRM dispatch: %s", crm_err)
 

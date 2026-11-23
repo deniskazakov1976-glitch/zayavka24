@@ -85,15 +85,32 @@ def _contact_keyboard() -> InlineKeyboardMarkup:
 
 
 class RateLimiter:
-    """Simple per-chat rate limiter to protect LLM API balance from spam."""
+    """Simple per-chat rate limiter to protect LLM API balance from spam with TTL cleanup."""
 
     def __init__(self, min_interval_sec: float = 1.5, max_per_hour: int = 30) -> None:
         self.min_interval_sec = min_interval_sec
         self.max_per_hour = max_per_hour
         self._timestamps: Dict[str, Deque[float]] = defaultdict(deque)
 
+    def cleanup(self, now: Optional[float] = None) -> int:
+        ts = now if now is not None else time.monotonic()
+        cutoff = ts - 3600.0
+        removed = 0
+        stale_keys = []
+        for cid, bucket in list(self._timestamps.items()):
+            while bucket and bucket[0] < cutoff:
+                bucket.popleft()
+            if not bucket:
+                stale_keys.append(cid)
+        for k in stale_keys:
+            self._timestamps.pop(k, None)
+            removed += 1
+        return removed
+
     def allow(self, chat_id: str, now: Optional[float] = None) -> bool:
         ts = now if now is not None else time.monotonic()
+        if len(self._timestamps) > 500:
+            self.cleanup(now=ts)
         bucket = self._timestamps[chat_id]
         if bucket and (ts - bucket[-1]) < self.min_interval_sec:
             return False
@@ -117,6 +134,8 @@ def build_telegram_router(
     quota_service: Optional[Any] = None,
     alert_manager: Optional[Any] = None,
     rate_limiter: Optional[RateLimiter] = None,
+    debouncer: Optional[Any] = None,
+    stt_service: Optional[Any] = None,
 ) -> Router:
     router = Router()
     rate_limiter = rate_limiter or RateLimiter()
@@ -524,7 +543,7 @@ def build_telegram_router(
                 "🔒 Ваша история диалога и персональные данные полностью удалены в соответствии со 152-ФЗ."
             )
 
-    @router.message(F.photo | F.voice | F.video | F.document)
+    @router.message(F.photo | F.voice | F.audio | F.video | F.video_note | F.document)
     async def handle_media(message: Message, bot: Bot) -> None:
         chat_id = str(message.chat.id)
         if storage.is_paused("telegram", chat_id):
@@ -542,6 +561,25 @@ def build_telegram_router(
         if message.photo:
             mtype = "photo"
             if settings.vision_enabled:
+                photo_size = message.photo[-1]
+                if photo_size.file_size and photo_size.file_size > 10 * 1024 * 1024:
+                    logger.warning("Telegram photo too large (>10MB): %s bytes", photo_size.file_size)
+                    await message.answer("Фотография слишком большая (лимит 10 МБ). Пришлите, пожалуйста, фото меньшего размера.")
+                    return
+
+                # Cap max 5 photos per session to prevent vision abuse
+                recent_hist = storage.get_history("telegram", chat_id, limit=20)
+                photo_count = sum(1 for m in recent_hist if "[фото]" in m.get("text", ""))
+                if photo_count >= 5:
+                    limit_reply = (
+                        f"Принял ваши фотографии! Старший мастер {company.manager_name} осмотрит все детали. "
+                        f"Напишите ваш номер телефона, чтобы мастер перезвонил вам с точным расчётом."
+                    )
+                    storage.add_message("telegram", chat_id, "user", "[фото]")
+                    storage.add_message("telegram", chat_id, "assistant", limit_reply)
+                    await message.answer(limit_reply)
+                    return
+
                 # Квота проверяется и для фото: vision-запросы самые дорогие
                 tenant_key = tenant_slug or getattr(company, "tenant_slug", None) or "default"
                 if quota_service:
@@ -564,14 +602,24 @@ def build_telegram_router(
                         await message.answer(fallback_reply)
                         return
                 try:
-                    photo_size = message.photo[-1]
                     file_info = await bot.get_file(photo_size.file_id)
                     if file_info.file_path:
                         photo_data_uri = None
                         try:
                             buf = io.BytesIO()
                             await bot.download_file(file_info.file_path, destination=buf)
-                            encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
+                            raw_bytes = buf.getvalue()
+                            try:
+                                from PIL import Image
+                                img = Image.open(io.BytesIO(raw_bytes))
+                                if max(img.width, img.height) > 1024:
+                                    img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                                    out_buf = io.BytesIO()
+                                    img.save(out_buf, format="JPEG", quality=85)
+                                    raw_bytes = out_buf.getvalue()
+                            except Exception as pil_err:
+                                logger.debug("PIL image resize skipped: %s", pil_err)
+                            encoded = base64.b64encode(raw_bytes).decode("utf-8")
                             photo_data_uri = f"data:image/jpeg;base64,{encoded}"
                         except Exception as e:
                             logger.warning("Failed to download telegram photo: %s", e)
@@ -601,6 +649,26 @@ def build_telegram_router(
                     logger.warning("Vision analysis in Telegram failed (%s), falling back to template", exc)
         elif message.voice or message.audio:
             mtype = "voice"
+            if stt_service:
+                target_media = message.voice or message.audio
+                if not (target_media.file_size and target_media.file_size > 20 * 1024 * 1024):
+                    try:
+                        file_info = await bot.get_file(target_media.file_id)
+                        if file_info.file_path:
+                            audio_buf = io.BytesIO()
+                            await bot.download_file(file_info.file_path, destination=audio_buf)
+                            ext = "voice.ogg" if message.voice else "audio.mp3"
+                            transcription = await stt_service.transcribe(audio_buf.getvalue(), filename=ext)
+                            if transcription and transcription.strip():
+                                await _process_and_reply_text(
+                                    f"[Голосовое] {transcription.strip()}",
+                                    message,
+                                    bot,
+                                    is_voice=True,
+                                )
+                                return
+                    except Exception as stt_err:
+                        logger.warning("Telegram STT transcription failed: %s", stt_err)
         elif message.video or message.video_note:
             mtype = "video"
         elif message.document:
@@ -642,106 +710,15 @@ def build_telegram_router(
         )
         await message.answer(wow_text, parse_mode="HTML", reply_markup=_trial_cta_keyboard())
 
-    @router.message(F.text)
-    async def handle_text(message: Message, bot: Bot) -> None:
+    async def _process_and_reply_text(
+        text: str,
+        message: Message,
+        bot: Bot,
+        is_voice: bool = False,
+    ) -> None:
         chat_id = str(message.chat.id)
-        text = (message.text or "").strip()
-        if not text:
-            return
-
-        if storage.is_paused("telegram", chat_id):
-            return
-
-        # --- SaaS-онбординг: 4-шаговый мастер заявки на тест-драйв (только платформа) ---
-        is_platform = (tenant_slug is None or tenant_slug == "default")
-        if is_platform and chat_id in _saas_wizard:
-            if text.lower() in ("отмена", "cancel", "меню", "назад", "/cancel", "/menu"):
-                _saas_wizard.pop(chat_id, None)
-                await message.answer(
-                    "❌ Заполнение заявки отменено.\n\nЧто хотите сделать?",
-                    reply_markup=_platform_menu_keyboard(),
-                )
-                return
-
-            wizard = _saas_wizard[chat_id]
-            step = wizard.get("step", 1)
-
-            if step == 1:
-                wizard["city_name"] = text
-                wizard["step"] = 2
-                await message.answer(
-                    "✅ Отлично!\n\n"
-                    "<b>Шаг 2 из 4.</b> Какая основная ниша вашего бизнеса?\n\n"
-                    "1 — Кузовной ремонт и покраска\n"
-                    "2 — Детейлинг и оклейка плёнкой\n"
-                    "3 — Слесарный ремонт и ТО\n"
-                    "4 — Другая (напишите)",
-                    parse_mode="HTML",
-                )
-                return
-
-            if step == 2:
-                niche_map = {
-                    "1": "Кузовной ремонт и покраска",
-                    "2": "Детейлинг и оклейка",
-                    "3": "Слесарный ремонт и ТО",
-                }
-                wizard["niche"] = niche_map.get(text.strip(), text)
-                wizard["step"] = 3
-                await message.answer(
-                    "✅ Понял!\n\n"
-                    "<b>Шаг 3 из 4.</b> Пришлите ссылку на ваше объявление на Авито\n"
-                    "или прикрепите фото / PDF прайс-листа.\n\n"
-                    "<i>Если прайса нет — просто напишите основные услуги и цены в этом сообщении.</i>",
-                    parse_mode="HTML",
-                )
-                return
-
-            if step == 3:
-                wizard["price_hint"] = text
-                wizard["step"] = 4
-                await message.answer(
-                    "✅ Прайс записал!\n\n"
-                    "<b>Шаг 4 из 4.</b> На какой номер телефона подключить уведомления о новых лидах?\n\n"
-                    "<i>Пример: +7 999 123-45-67</i>",
-                    parse_mode="HTML",
-                )
-                return
-
-            if step == 4:
-                wizard["owner_phone"] = text
-                _saas_wizard.pop(chat_id, None)
-
-                # Формируем заявку и уведомляем Дениса
-                user_label = "Неизвестный"
-                if message.from_user:
-                    uname = f"@{message.from_user.username}" if message.from_user.username else ""
-                    user_label = f"{message.from_user.full_name} {uname}".strip()
-
-                await notifier.notify_saas_trial_request(
-                    user_label=user_label,
-                    chat_id=chat_id,
-                    city_name=wizard.get("city_name", "—"),
-                    niche=wizard.get("niche", "—"),
-                    price_hint=wizard.get("price_hint", "—"),
-                    owner_phone=wizard.get("owner_phone", "—"),
-                )
-
-                await message.answer(
-                    "🎉 <b>Заявка принята!</b>\n\n"
-                    "Мы настроим и обучим вашего персонального бота по вашему прайсу.\n"
-                    "Основатель сервиса свяжется с вами в течение 1–2 часов для запуска тест-драйва на <b>3 дня бесплатно</b>.\n\n"
-                    "Пока ждёте — можете протестировать, как ИИ общается с клиентами прямо сейчас 👇",
-                    parse_mode="HTML",
-                    reply_markup=_test_scenarios_keyboard(),
-                )
-                return
-
-        if not is_admin(message) and not rate_limiter.allow(chat_id):
-            await message.answer("Секунду, обрабатываю предыдущее сообщение — напишите чуть позже.")
-            return
-
         slug = storage.get_session_company("telegram", chat_id)
+        is_platform = (tenant_slug is None or tenant_slug == "default")
         is_demo_session = is_platform and (slug in (_PLATFORM_DEMO_SLUG, "demo_detailing") or not slug)
 
         # Если бот платформенный и пользователь в demo-режиме (или без slug) — переключаем на demo_detailing
@@ -864,6 +841,116 @@ def build_telegram_router(
             storage.save_knowledge_gap(gap)
             await notifier.notify_knowledge_gap(gap, company)
 
+    @router.message(F.text)
+    async def handle_text(message: Message, bot: Bot) -> None:
+        chat_id = str(message.chat.id)
+        text = (message.text or "").strip()
+        if not text:
+            return
+
+        if storage.is_paused("telegram", chat_id):
+            return
+
+        # --- SaaS-онбординг: 4-шаговый мастер заявки на тест-драйв (только платформа) ---
+        is_platform = (tenant_slug is None or tenant_slug == "default")
+        if is_platform and chat_id in _saas_wizard:
+            if text.lower() in ("отмена", "cancel", "меню", "назад", "/cancel", "/menu"):
+                _saas_wizard.pop(chat_id, None)
+                await message.answer(
+                    "❌ Заполнение заявки отменено.\n\nЧто хотите сделать?",
+                    reply_markup=_platform_menu_keyboard(),
+                )
+                return
+
+            wizard = _saas_wizard[chat_id]
+            step = wizard.get("step", 1)
+
+            if step == 1:
+                wizard["city_name"] = text
+                wizard["step"] = 2
+                await message.answer(
+                    "✅ Отлично!\n\n"
+                    "<b>Шаг 2 из 4.</b> Какая основная ниша вашего бизнеса?\n\n"
+                    "1 — Кузовной ремонт и покраска\n"
+                    "2 — Детейлинг и оклейка плёнкой\n"
+                    "3 — Слесарный ремонт и ТО\n"
+                    "4 — Другая (напишите)",
+                    parse_mode="HTML",
+                )
+                return
+
+            if step == 2:
+                niche_map = {
+                    "1": "Кузовной ремонт и покраска",
+                    "2": "Детейлинг и оклейка",
+                    "3": "Слесарный ремонт и ТО",
+                }
+                wizard["niche"] = niche_map.get(text.strip(), text)
+                wizard["step"] = 3
+                await message.answer(
+                    "✅ Понял!\n\n"
+                    "<b>Шаг 3 из 4.</b> Пришлите ссылку на ваше объявление на Авито\n"
+                    "или прикрепите фото / PDF прайс-листа.\n\n"
+                    "<i>Если прайса нет — просто напишите основные услуги и цены в этом сообщении.</i>",
+                    parse_mode="HTML",
+                )
+                return
+
+            if step == 3:
+                wizard["price_hint"] = text
+                wizard["step"] = 4
+                await message.answer(
+                    "✅ Прайс записал!\n\n"
+                    "<b>Шаг 4 из 4.</b> На какой номер телефона подключить уведомления о новых лидах?\n\n"
+                    "<i>Пример: +7 999 123-45-67</i>",
+                    parse_mode="HTML",
+                )
+                return
+
+            if step == 4:
+                wizard["owner_phone"] = text
+                _saas_wizard.pop(chat_id, None)
+
+                # Формируем заявку и уведомляем Дениса
+                user_label = "Неизвестный"
+                if message.from_user:
+                    uname = f"@{message.from_user.username}" if message.from_user.username else ""
+                    user_label = f"{message.from_user.full_name} {uname}".strip()
+
+                await notifier.notify_saas_trial_request(
+                    user_label=user_label,
+                    chat_id=chat_id,
+                    city_name=wizard.get("city_name", "—"),
+                    niche=wizard.get("niche", "—"),
+                    price_hint=wizard.get("price_hint", "—"),
+                    owner_phone=wizard.get("owner_phone", "—"),
+                )
+
+                await message.answer(
+                    "🎉 <b>Заявка принята!</b>\n\n"
+                    "Мы настроим и обучим вашего персонального бота по вашему прайсу.\n"
+                    "Основатель сервиса свяжется с вами в течение 1–2 часов для запуска тест-драйва на <b>3 дня бесплатно</b>.\n\n"
+                    "Пока ждёте — можете протестировать, как ИИ общается с клиентами прямо сейчас 👇",
+                    parse_mode="HTML",
+                    reply_markup=_test_scenarios_keyboard(),
+                )
+                return
+
+        if not is_admin(message) and not rate_limiter.allow(chat_id):
+            await message.answer("Секунду, обрабатываю предыдущее сообщение — напишите чуть позже.")
+            return
+
+        if debouncer:
+            await debouncer.buffer_message(
+                channel="telegram",
+                chat_id=chat_id,
+                text=text,
+                on_flush=lambda combined: _process_and_reply_text(combined, message, bot),
+            )
+            return
+
+        await _process_and_reply_text(text, message, bot)
+
     return router
 
 
@@ -877,6 +964,8 @@ def create_dispatcher(
     admin_ids: Optional[list] = None,
     quota_service: Optional[Any] = None,
     alert_manager: Optional[Any] = None,
+    debouncer: Optional[Any] = None,
+    stt_service: Optional[Any] = None,
 ) -> Dispatcher:
     dp = Dispatcher()
     dp.include_router(
@@ -884,6 +973,7 @@ def create_dispatcher(
             settings, company_store, storage, llm, notifier,
             tenant_slug=tenant_slug, admin_ids=admin_ids,
             quota_service=quota_service, alert_manager=alert_manager,
+            debouncer=debouncer, stt_service=stt_service,
         )
     )
     return dp

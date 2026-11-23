@@ -45,6 +45,8 @@ class BotManager:
         llm: LLMService,
         alert_manager: Optional[Any] = None,
         quota_service: Optional[Any] = None,
+        debouncer: Optional[Any] = None,
+        stt_service: Optional[Any] = None,
     ) -> None:
         self.settings = settings
         self.company_store = company_store
@@ -52,6 +54,8 @@ class BotManager:
         self.llm = llm
         self.alert_manager = alert_manager
         self.quota_service = quota_service
+        self.debouncer = debouncer
+        self.stt_service = stt_service
         self._runtimes: Dict[str, TenantRuntime] = {}
         self._start_lock = asyncio.Lock()
 
@@ -127,6 +131,8 @@ class BotManager:
             admin_ids=admin_ids,
             quota_service=self.quota_service,
             alert_manager=self.alert_manager,
+            debouncer=self.debouncer,
+            stt_service=self.stt_service,
         )
         task = asyncio.create_task(self._poll_forever(dp, bot, slug), name=f"tg:{slug}")
         self._runtimes[slug] = TenantRuntime(

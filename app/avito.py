@@ -212,6 +212,12 @@ class AvitoWebhookHandler:
                 logger.warning("No active AvitoClient configured for company %s", company.slug)
                 return {"status": "error", "reason": "no_avito_client"}
 
+            if getattr(active_client, "user_id", None):
+                try:
+                    self.storage.update_avito_account_activity(int(active_client.user_id))
+                except Exception as act_err:
+                    logger.debug("Failed to update avito activity: %s", act_err)
+
             # K4: Persistent echo check using active tenant client's user_id
             bot_user_id = getattr(active_client, "user_id", None)
             if bot_user_id is not None and author_id == bot_user_id:

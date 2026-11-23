@@ -825,12 +825,17 @@ def build_dashboard_router(
         tenant = storage.get_tenant(slug)
         if not tenant:
             raise HTTPException(status_code=404, detail="Клиент не найден")
+        owner_id = (
+            payload.owner_telegram_id
+            if payload.owner_telegram_id is not None
+            else tenant.get("owner_telegram_id")
+        )
         storage.save_tenant(
             slug=slug,
             name=tenant["name"],
             brand_name=tenant.get("brand_name") or "",
             telegram_bot_token=payload.telegram_bot_token,
-            owner_telegram_id=payload.owner_telegram_id,
+            owner_telegram_id=owner_id,
             plan=tenant.get("plan") or "basic",
             status=tenant.get("status") or "active",
         )
@@ -1143,6 +1148,10 @@ def build_dashboard_router(
             client_ip = parts[-1] if parts else (request.client.host if request.client else "unknown")
 
         now = time.time()
+        if len(_sim_rate_limits) > 500:
+            stale = [k for k, v in _sim_rate_limits.items() if not v or (now - v[-1] >= 60)]
+            for k in stale:
+                _sim_rate_limits.pop(k, None)
         timestamps = _sim_rate_limits.setdefault(client_ip, [])
         _sim_rate_limits[client_ip] = [t for t in timestamps if now - t < 60]
         if len(_sim_rate_limits[client_ip]) >= 30:

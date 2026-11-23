@@ -71,11 +71,26 @@ async def run() -> None:
     # Учёт токенов и лимиты тарифов (Блок B)
     quota_service = QuotaService(storage, alert_manager=alert_manager)
 
+    # Дебаунс сообщений и распознавание голосовых заметок (STT)
+    from app.debounce import MessageDebouncer
+    from app.stt import SpeechToTextService
+
+    debouncer = MessageDebouncer(delay_seconds=2.0)
+    stt_service: Optional[SpeechToTextService] = None
+    if settings.llm_api_key:
+        stt_service = SpeechToTextService(
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url,
+            model="whisper-1",
+        )
+
     # Мультибот: свой Telegram-бот на каждого клиента
     bot_manager = BotManager(
         settings, company_store, storage, llm,
         alert_manager=alert_manager,
         quota_service=quota_service,
+        debouncer=debouncer,
+        stt_service=stt_service,
     )
     alert_manager.bot_manager = bot_manager
     tasks: list[asyncio.Task] = list(await bot_manager.start())
@@ -108,6 +123,7 @@ async def run() -> None:
         default_chat_id=settings.default_notify_chat_id,
         bot_manager=bot_manager,
         storage=storage,
+        alert_manager=alert_manager,
     )
 
     avito_client: AvitoClient | None = None
@@ -141,6 +157,8 @@ async def run() -> None:
         notifier=notifier,
         manual_pause_hours=settings.avito_manual_pause_hours,
         quota_service=quota_service,
+        debouncer=debouncer,
+        stt_service=stt_service,
     )
 
     if settings.dashboard_enabled or settings.avito_enabled:

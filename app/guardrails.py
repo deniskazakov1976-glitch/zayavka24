@@ -1,7 +1,7 @@
 import logging
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 from app.models import CompanyProfile
 
@@ -41,8 +41,41 @@ def _extract_numbers(text: str) -> Set[int]:
     return numbers
 
 
+def extract_allowed_price_ranges(company: CompanyProfile) -> List[Tuple[int, int]]:
+    """Извлекает допустимые диапазоны цен [min_p, max_p] из услуг и FAQ компании."""
+    ranges: List[Tuple[int, int]] = []
+    corpus = list(company.services or []) + list(company.faq or [])
+    range_regex = re.compile(
+        r"от\s+(\d[\d\s]*\d|\d+)\s*(?:до|-)\s*(\d[\d\s]*\d|\d+)\s*(?:₽|руб|р\b|тыс|к\b)?",
+        re.IGNORECASE,
+    )
+    for item in corpus:
+        item_clean = re.sub(r"(\d)\s+(\d)", r"\1\2", item)
+        for m in range_regex.finditer(item_clean):
+            try:
+                mult = 1000 if any(k in m.group(0).lower() for k in ("тыс", "к")) else 1
+                v1 = int(m.group(1).replace(" ", "")) * mult
+                v2 = int(m.group(2).replace(" ", "")) * mult
+                if v1 > v2:
+                    v1, v2 = v2, v1
+                ranges.append((v1, v2))
+            except ValueError:
+                pass
+    return ranges
+
+
+def is_number_allowed(num: int, allowed_numbers: Set[int], allowed_ranges: List[Tuple[int, int]]) -> bool:
+    """Проверяет, разрешено ли число: есть в белом списке или попадает в вилку цен."""
+    if num in allowed_numbers:
+        return True
+    for low, high in allowed_ranges:
+        if low <= num <= high:
+            return True
+    return False
+
+
 def extract_allowed_numbers(company: CompanyProfile) -> Set[int]:
-    """Формирует белый список допустимых чисел и цен из базы знаний компании."""
+    """Формирует белый список допустимых чисел, цен и парных сумм из базы знаний компании."""
     corpus_parts = [
         company.discount_offer or "",
         company.media_reply_promise or "",
@@ -59,6 +92,15 @@ def extract_allowed_numbers(company: CompanyProfile) -> Set[int]:
     # Allow common small conversational numbers (1, 2, 3, 5, 10, 15, 20, 30, 24)
     small_numbers = {1, 2, 3, 4, 5, 7, 10, 14, 15, 20, 24, 30, 60}
     allowed.update(small_numbers)
+
+    # Add pairwise sums of major price points to support bundled services
+    price_points = [n for n in allowed if n >= 1000]
+    for i in range(len(price_points)):
+        for j in range(i, len(price_points)):
+            pair_sum = price_points[i] + price_points[j]
+            if pair_sum <= 500000:
+                allowed.add(pair_sum)
+
     return allowed
 
 
@@ -114,6 +156,7 @@ def validate_reply(
 
     cleaned_reply = clean_humanize_artifacts(reply_text)
     allowed_numbers = extract_allowed_numbers(company)
+    allowed_ranges = extract_allowed_price_ranges(company)
 
     violations = []
     cleaned_reply_for_prices = re.sub(r"(\d)\s+(\d)", r"\1\2", cleaned_reply)
@@ -129,7 +172,7 @@ def validate_reply(
         for g in (1, 2):
             try:
                 val = int(rm.group(g).replace(" ", "")) * multiplier
-                if val > 100 and val not in allowed_numbers:
+                if val > 100 and not is_number_allowed(val, allowed_numbers, allowed_ranges):
                     violations.append(f"Выдуманная цена диапазона: {rm.group(g).strip()}")
             except ValueError:
                 pass
@@ -146,10 +189,24 @@ def validate_reply(
             num = int(match_str.replace(" ", ""))
             if any(k in full_match for k in ("тыс", "к")):
                 num *= 1000
-            if num > 100 and num not in allowed_numbers:
+            if "%" in m.group(0):
+                if num not in allowed_numbers:
+                    violations.append(f"Выдуманная скидка: {m.group(0).strip()}")
+            elif num > 100 and not is_number_allowed(num, allowed_numbers, allowed_ranges):
                 violations.append(f"Выдуманная цена: {m.group(0).strip()}")
-            elif "%" in m.group(0) and num not in allowed_numbers:
-                violations.append(f"Выдуманная скидка: {m.group(0).strip()}")
+        except ValueError:
+            pass
+
+    # 3. Detect bare numbers without currency symbol after price triggers ("стоить 42000", "цена 55000")
+    bare_price_pattern = re.compile(
+        r"(?:стоить|стоимость|цена|обойд[её]тся|расч[её]т|составит|чек|сумма)\s*(?:в|около|примерно)?\s*(\d{4,6})\b",
+        re.IGNORECASE,
+    )
+    for bm in bare_price_pattern.finditer(cleaned_reply_for_prices):
+        try:
+            val = int(bm.group(1).replace(" ", ""))
+            if val > 100 and not is_number_allowed(val, allowed_numbers, allowed_ranges):
+                violations.append(f"Выдуманная цена без валюты: {bm.group(1).strip()}")
         except ValueError:
             pass
 

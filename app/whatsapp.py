@@ -63,6 +63,8 @@ class WhatsAppWebhookHandler:
         manual_pause_hours: int = 24,
         client: Optional[httpx.AsyncClient] = None,
         quota_service: Optional[Any] = None,
+        debouncer: Optional[Any] = None,
+        stt_service: Optional[Any] = None,
     ) -> None:
         self.company_store = company_store
         self.storage = storage
@@ -71,6 +73,8 @@ class WhatsAppWebhookHandler:
         self.manual_pause_hours = manual_pause_hours
         self._http_client = client
         self.quota_service = quota_service
+        self.debouncer = debouncer
+        self.stt_service = stt_service
 
     def _resolve_company(self, slug_or_instance: str) -> Optional[CompanyProfile]:
         # 1. Direct lookup by slug
@@ -166,64 +170,80 @@ class WhatsAppWebhookHandler:
             download_url = file_data.get("downloadUrl")
             caption = file_data.get("caption") or ""
 
-            # Check quota for Vision processing
-            t_slug = getattr(company, "tenant_slug", None) or "default"
-            quota_ok = True
-            if self.quota_service:
-                q_status = self.quota_service.check(t_slug)
-                if not q_status.allowed:
-                    quota_ok = False
-
-            reply_text = None
-            if type_message == "imageMessage" and download_url and caption and quota_ok:
+            # Check if voice can be transcribed via STT service
+            if type_message in ("audioMessage", "voiceMessage") and download_url and self.stt_service:
                 try:
-                    history_msgs = self.storage.get_history("whatsapp", chat_id, limit=6)
-                    prompt_msg = caption
-                    llm_res = await self.llm.generate_reply(
+                    c = self._http_client or httpx.AsyncClient(timeout=20.0)
+                    resp = await c.get(download_url)
+                    if resp.status_code == 200:
+                        transcribed = await self.stt_service.transcribe(resp.content, filename="voice.ogg")
+                        if transcribed and transcribed.strip():
+                            incoming_text = f"[Голосовое] {transcribed.strip()}"
+                            type_message = "textMessage"
+                            # Fall through to section 5 below
+                except Exception as stt_err:
+                    logger.warning("WhatsApp STT failed: %s", stt_err)
+
+            if type_message != "textMessage":
+                # Check quota for Vision processing
+                t_slug = getattr(company, "tenant_slug", None) or "default"
+                quota_ok = True
+                if self.quota_service:
+                    q_status = self.quota_service.check(t_slug)
+                    if not q_status.allowed:
+                        quota_ok = False
+
+                reply_text = None
+                if type_message == "imageMessage" and download_url and caption and quota_ok:
+                    try:
+                        history_msgs = self.storage.get_history("whatsapp", chat_id, limit=6)
+                        prompt_msg = caption
+                        llm_res = await self.llm.generate_reply(
+                            company=company,
+                            history=history_msgs,
+                            user_message=prompt_msg,
+                            channel="whatsapp",
+                            chat_id=chat_id,
+                            image_url=download_url,
+                            tenant_slug=t_slug,
+                        )
+                        reply_text = llm_res.text
+                        if llm_res.lead and not self.storage.has_lead("whatsapp", chat_id, llm_res.lead.phone):
+                            self.storage.save_lead(llm_res.lead)
+                            if self.notifier:
+                                await self.notifier.notify(llm_res.lead, company)
+                    except Exception as exc:
+                        logger.warning("WhatsApp vision reply failed: %s, falling back to media reply", exc)
+
+                if not reply_text:
+                    reply_text = build_media_reply(
                         company=company,
-                        history=history_msgs,
-                        user_message=prompt_msg,
-                        channel="whatsapp",
-                        chat_id=chat_id,
-                        image_url=download_url,
-                        tenant_slug=t_slug,
+                        media_type=media_kind,
+                        has_phone=has_phone,
                     )
-                    reply_text = llm_res.text
-                    if llm_res.lead and not self.storage.has_lead("whatsapp", chat_id, llm_res.lead.phone):
-                        self.storage.save_lead(llm_res.lead)
-                        if self.notifier:
-                            await self.notifier.notify_lead(llm_res.lead, company)
-                except Exception as exc:
-                    logger.warning("WhatsApp vision reply failed: %s, falling back to media reply", exc)
 
-            if not reply_text:
-                reply_text = build_media_reply(
-                    company=company,
-                    media_type=media_kind,
-                    has_phone=has_phone,
-                )
+                # Record user media stub in history
+                u_text = f"[{media_kind.upper()}] {caption}".strip()
+                self.storage.add_message("whatsapp", chat_id, "user", u_text)
+                # Pre-record pending echo to defeat race conditions (K4)
+                rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=reply_text, status="pending")
+                sent_res = await wa_client.send_message(chat_id, reply_text)
+                sent_id = str(sent_res.get("idMessage") or "")
+                if sent_id:
+                    self.storage.update_bot_sent_message_id(rec_id, sent_id)
+                self.storage.add_message("whatsapp", chat_id, "assistant", reply_text)
 
-            # Record user media stub in history
-            u_text = f"[{media_kind.upper()}] {caption}".strip()
-            self.storage.add_message("whatsapp", chat_id, "user", u_text)
-            # Pre-record pending echo to defeat race conditions (K4)
-            rec_id = self.storage.record_bot_sent_message("whatsapp", chat_id, text=reply_text, status="pending")
-            sent_res = await wa_client.send_message(chat_id, reply_text)
-            sent_id = str(sent_res.get("idMessage") or "")
-            if sent_id:
-                self.storage.update_bot_sent_message_id(rec_id, sent_id)
-            self.storage.add_message("whatsapp", chat_id, "assistant", reply_text)
-
-            if event_id:
-                self.storage.mark_event_processed("whatsapp", event_id, "replied_media")
-            return {"status": "replied_media", "reply": reply_text}
+                if event_id:
+                    self.storage.mark_event_processed("whatsapp", event_id, "replied_media")
+                return {"status": "replied_media", "reply": reply_text}
 
         # 5. Handle Text Messages
-        incoming_text = (
-            (msg_data.get("extendedTextMessageData") or {}).get("text")
-            or (msg_data.get("textMessageData") or {}).get("textMessage")
-            or ""
-        ).strip()
+        if "incoming_text" not in locals() or not incoming_text:
+            incoming_text = (
+                (msg_data.get("extendedTextMessageData") or {}).get("text")
+                or (msg_data.get("textMessageData") or {}).get("textMessage")
+                or ""
+            ).strip()
 
         if not incoming_text:
             return {"status": "ignored", "reason": "empty_text"}
